@@ -1,0 +1,19 @@
+{
+  "runner": "terminal",
+  "tasks": [
+    {
+      "args": ["run", "build"],
+      "command": "yarn",
+      "echoCommand": false,
+      "isBuildCommand": true,
+      "isShellCommand": false,
+      "options": {
+        "cwd": "${workspaceRoot}/tools/rockdisk"
+      },
+      "problemMatcher": ["$tsc"],
+      "showOutput": "always",
+      "taskName": "build"
+    }
+  ],
+  "version": "0.1.0"
+}

@@ -1,0 +1,35 @@
+{
+  "name": "rockdisk",
+  "version": "1.0.0",
+  "description": "Creates disks for use in a virtual machine",
+  "author": "Justin Rockwood",
+  "license": "Apache-2.0",
+  "private": true,
+  "main": "./lib/src/index.js",
+  "types": "./lib/src/index.d.ts",
+  "bin": "./bin/rockdisk",
+  "scripts": {
+    "build": "echo Building...&& yarn run clean && yarn run compile && yarn run lint && yarn run test",
+    "clean": "echo Cleaning...&& ./node_modules/.bin/rimraf lib",
+    "compile": "echo Compiling...&& ./node_modules/.bin/tsc -p .",
+    "lint": "echo Linting...&& ./node_modules/.bin/tslint src/**/*.ts test/**/*.ts",
+    "test": "echo Testing...&& ./node_modules/.bin/jasmine lib/test/**/*.js"
+  },
+  "devDependencies": {
+    "@types/colors": "1.1.3",
+    "@types/fs-extra": "4.0.2",
+    "@types/jasmine": "2.6.0",
+    "@types/node": "8.0.31",
+    "@types/yargs": "8.0.2",
+    "jasmine": "2.8.0",
+    "jasmine-collection-matchers": "0.2.0",
+    "rimraf": "2.6.2",
+    "tslint": "5.7.0",
+    "typescript": "2.5.3"
+  },
+  "dependencies": {
+    "colors": "1.1.2",
+    "fs-extra": "4.0.2",
+    "yargs": "9.0.1"
+  }
+}
