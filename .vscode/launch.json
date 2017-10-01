@@ -6,8 +6,18 @@
       "request": "launch",
       "name": "Create",
       "program": "${workspaceRoot}/tools/rockdisk/bin/rockdisk",
-      "args": ["create", "--out", "temp.bin", "--type", "floppy"],
-      "cwd": "${workspaceRoot}/tools/rockdisk",
+      "args": ["create", "--out", "disks/rockos.vfd", "--type", "floppy"],
+      "cwd": "${workspaceRoot}",
+      "sourceMaps": true,
+      "outFiles": ["tools/rockdisk/lib/**/*.js"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Copy",
+      "program": "${workspaceRoot}/tools/rockdisk/bin/rockdisk",
+      "args": ["copy", "--src", "src/rockos/v0.1/bootload.bin", "--dest", "disks/rockos.vfd", "--doff", "0"],
+      "cwd": "${workspaceRoot}",
       "sourceMaps": true,
       "outFiles": ["tools/rockdisk/lib/**/*.js"]
     },
