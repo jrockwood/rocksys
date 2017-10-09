@@ -1,0 +1,152 @@
+;
+; bootload.rasm (Rockwood OS Bootloader)
+; --------------------------------------
+; This version will simply print out the copyright and version information to
+; the screen, which lays the foundation for adding additional features. Even
+; doing that much will validate that we're setting up the segment registers
+; correctly and using the BIOS interrupts to print strings to the screen.
+;
+; Remember that the only thing we have available to us is the bare hardware.
+; Since we don't have an assembler (yet), we'll need to write the OS boot loader
+; in machine code. So that it's easier to maintain, we have this associated file
+; with the code. The "rasm" file is written in Rockwood Assembler code, which
+; for the first version simply accepts hex pairs and comments. We'll use a hex
+; editor to manually assemble it, which will be painful, but will force us to
+; keep it small and give us an extra incentive to create the assembler.
+;
+; Copyright (c) 2017 Justin Rockwood. All rights reserved.
+;
+
+; [BITS 16]               ; Tells the assembler to generate 16 bit code
+
+; A device is "bootable" if it carries a boot sector with the byte sequence
+; 0x55, 0xAA in bytes 511 and 512 respectively. When the BIOS finds such a boot
+; sector, it is loaded into memory at a specific location; this is usually
+; 0x0000:0x7c00 (segment 0, address 0x7c00). However, some BIOS' load to
+; 0x7c0:0x0000 (segment 0x07c0, offset 0), which resolves to the same physical
+; address, but can be surprising.
+;
+; When the wrong CS:IP pair is assumed, absolute near jumps will not work
+; properly, and any code like mov ax,cs; mov ds,ax will result in unexpected
+; variable locations. A good practice is to enforce CS:IP at the very start of
+; the boot sector, which we do doing a far jump to an absolute address.
+
+; [ORG 0x7C00]            ; We'll set the segment registers later to point to
+                          ; the right addresses
+
+; start:
+~ea ~80 ~7c ~00 ~00 ; jmp 0x00:main       ; do a far jump to set CS:IP correctly
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Data Section
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; 0x7c05
+; str_banner:
+;     db `RockOS 0.1\r\n`, 0
+                    ~52 ~6f ~63   ~6b ~4f ~53 ~20 ~30 ~2e ~31 ~0d
+~0a ~00
+
+; 0x7c12
+; str_copyright:
+;     db `Copyright (c) 2017 Justin Rockwood. All rights reserved.\r\n\r\n`, 0
+        ~43 ~6f ~70 ~79 ~72 ~69   ~67 ~68 ~74 ~20 ~28 ~63 ~29 ~20
+~32 ~30 ~31 ~37 ~20 ~4a ~75 ~73   ~74 ~69 ~6e ~20 ~52 ~6f ~63 ~6b
+~77 ~6f ~6f ~64 ~2e ~20 ~41 ~6c   ~6c ~20 ~72 ~69 ~67 ~68 ~74 ~73
+~20 ~72 ~65 ~73 ~65 ~72 ~76 ~65   ~64 ~2e ~0d ~0a ~0d ~0a ~00
+
+; Keep the data section to 128 bytes so that it's easy to calculate the jump offset.
+; times 128 - ($ - $$) db 0
+                                                              ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Program
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; main:
+    ; --------------------------------------------------------------------------
+    ; The BIOS loads us at address 0000:7C00, so set up the segment registers
+    ; to all point to the same segment.
+
+~fa         ; cli                 ; disable interrupts
+~8c ~c8     ; mov ax, cs
+~8e ~d8     ; mov ds, ax
+~8e ~c0     ; mov es, ax
+~8e ~e0     ; mov fs, ax
+~8e ~e8     ; mov gs, ax
+
+    ; --------------------------------------------------------------------------
+    ; Create the stack at 0x2000:FFFF. It will move down in memory addresses.
+
+~b8 ~00 ~20 ; mov ax, 0x2000
+~8e ~d0     ; mov ss, ax
+~bc ~ff ~ff ; mov sp, 0xffff
+~fb         ; sti                 ; restore interrupts
+
+    ; --------------------------------------------------------------------------
+    ; Display the loading message.
+
+~be ~05 ~7c ; mov si, str_banner
+~e8 ~08 ~00 ; call print_string
+~be ~12 ~7c ; mov si, str_copyright
+~e8 ~02 ~00 ; call print_string
+
+    ; --------------------------------------------------------------------------
+    ; We're done
+
+~fa         ; cli
+~f4         ; hlt
+
+
+; ------------------------------------------------------------------------------
+; print_string (14 bytes)
+;   Prints a string to the console.
+;
+;   Input
+;     DS:SI - null terminated string to print
+; ------------------------------------------------------------------------------
+
+; print_string:
+~b4 ~0e     ; mov ah, 0x0e        ; int 0x10,e = write text in teletype mode
+~31 ~db     ; xor bx, bx          ; bh = 0 page number (text modes) and
+            ;                     ; bl = 0 foreground color (graphics modes only)
+; .nextChar:
+~ac         ; lodsb               ; loads the byte at ds:si to al and increment si
+~08 ~c0     ; or al, al           ; see if we've read the null termination
+~74 ~04     ; jz .exit
+~cd ~10     ; int 0x10            ; print the character
+~eb ~f7     ; jmp .nextChar
+; .exit:
+~c3         ; ret
+~c3
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Bootloader Suffix
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; times 510 - ($ - $$) db 0           ; Fill the rest of sector with 0
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+~55 ~aa     ; dw 0xAA55                           ; Add boot signature at the end of bootloader
