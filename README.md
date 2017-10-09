@@ -62,8 +62,8 @@ we'll "allow" the following tools:
   they both have everything we need also.
 
 So how do you write an assembler without having anything else? You have to
-bootstrap it. See the readme file in the `rockasm` directory for details on how
-we do that.
+bootstrap it. See the [Rockwood Assembly](docs/rockasm.md) documentation for
+details on how we do that.
 
 Before we can run an assembler, though, we need a basic boot loader. See the
-`rockos\readme` file for more information.
+[Rockwood OS](docs/rockos.md) file for more information.
