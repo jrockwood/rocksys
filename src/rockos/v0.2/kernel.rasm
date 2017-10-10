@@ -1,0 +1,89 @@
+;
+; kernel.rasm (Rockwood OS Kernel)
+; --------------------------------
+; Copyright (c) 2017 Justin Rockwood. All rights reserved.
+;
+
+; [BITS 16]               ; Tells the assembler to generate 16 bit code
+
+; start:
+~eb ~7e     ; jmp kernel_main
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Data Section
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; str_hello:
+;     db `Hello, world!\r\n`, 0
+         ~48 ~65 ~6c ~6c ~6f   ~2c ~20 ~77 ~6f ~72 ~6c ~64 ~21 ~0d
+~0a ~00
+
+; Keep the data section to 128 bytes so that it's easy to calculate the jump offset.
+; times 128 - ($ - $$) db 0
+
+        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Program
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; kernel_main:
+    ; --------------------------------------------------------------------------
+    ; The bootloader loads us at address 0x2000:0000, so set up the segment
+    ; registers to all point to the same segment.
+
+~fa         ; cli                 ; disable interrupts
+~8c ~c8     ; mov ax, cs
+~8e ~d8     ; mov ds, ax
+~8e ~c0     ; mov es, ax
+~8e ~e0     ; mov fs, ax
+~8e ~e8     ; mov gs, ax
+
+    ; --------------------------------------------------------------------------
+    ; Create the stack at 0x2000:FFFF. It will move down in memory addresses.
+
+~b8 ~00 ~20 ; mov ax, 0x2000
+~8e ~d0     ; mov ss, ax
+~bc ~ff ~ff ; mov sp, 0xffff
+~fb         ; sti                 ; restore interrupts
+
+    ; --------------------------------------------------------------------------
+    ; Print hello world
+
+~be ~02 ~00 ; mov si, str_hello
+~e8 ~02 ~00 ; call os_print_string
+
+    ; --------------------------------------------------------------------------
+    ; We're done
+
+~fa         ; cli
+~f4         ; hlt
+
+; ------------------------------------------------------------------------------
+; os_print_string
+;   Prints a string to the console.
+;
+;   Input
+;     DS:SI - null terminated string to print
+; ------------------------------------------------------------------------------
+
+; os_print_string:
+~60         ; pusha
+~b4 ~0e     ; mov ah, 0x0e        ; int 0x10,e = write text in teletype mode
+~31 ~db     ; xor bx, bx          ; bh = 0 page number (text modes) and
+            ;                     ; bl = 0 foreground color (graphics modes only)
+; .nextChar:
+~ac         ; lodsb               ; loads the byte at ds:si to al and increment si
+~08 ~c0     ; or al, al           ; see if we've read the null termination
+~74 ~04     ; jz .exit
+~cd ~10     ; int 0x10            ; print the character
+~eb ~f7     ; jmp .nextChar
+; .exit:
+~61         ; popa
+~c3         ; ret

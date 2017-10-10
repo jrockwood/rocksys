@@ -56,7 +56,7 @@ and using the BIOS interrupts to print strings to the screen.
 
 **Building**
 
-Running `build.bat` will create a blank floppy disk image and then copy our 512
+Running `build.cmd` will create a blank floppy disk image and then copy our 512
 byte bootloader file to the first segment on the floppy disk.
 
 **Setup**
@@ -70,3 +70,25 @@ minimum requirements in terms of processor and memory.
 Start the virtual machine that you created, which boots from the floppy and you
 should see the banner and copyright information printed to the screen. Not much
 to see, but a lot is happening behind the scenes.
+
+
+
+### Version 0.2 - Basic Kernel
+
+This version loads the `kernel.bin` file from the floppy disk into memory
+location `0x2000:0000` and then starts executing it. The `kernel.bin` file will
+be stored on the floppy in sector 2, starting at `0x0200`.
+
+The kernel will simply print "Hello, World" and then halt. Again, it doesn't do
+much but it puts us into a good position since we'll have to set up the segment
+registers and the stack.
+
+**Building**
+
+All of the versions will have a `build.cmd` file that can be run. It will set up
+the floppy disk with the bootloader and the kernel.
+
+**Running**
+
+Same as last time, from this point on, if you don't see a Building and Running
+section, assume it's the same process.
