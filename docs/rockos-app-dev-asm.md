@@ -87,6 +87,37 @@ caller:
 Screen
 --------------------------------------------------------------------------------
 
+### `os_print_char(char)`
+Prints a character to the console.
+
+|                |                             |
+|----------------|-----------------------------|
+| **Address**    | 0x0C                        |
+| **Parameters** | `char` - character to print |
+| **Returns**    | Nothing                     |
+
+
+### `os_print_line(str)`
+Prints a null-terminated string to the screen followed by a new line sequence
+(carriage return/line feed combination, CR/LF).
+
+|                |                           |
+|----------------|---------------------------|
+| **Address**    | 0x06                      |
+| **Parameters** | `str` - address of string |
+| **Returns**    | Nothing                   |
+
+
+### `os_print_newline()`
+Prints a new line sequence (carriage return/line feed combination, CR/LF).
+
+|                |                         |
+|----------------|-------------------------|
+| **Address**    | 0x09                    |
+| **Parameters** | None                    |
+| **Returns**    | Nothing                 |
+
+
 ### `os_print_string(str)`
 Prints a null-terminated string to the screen.
 

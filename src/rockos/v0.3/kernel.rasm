@@ -22,12 +22,16 @@
 ; sys_call_table:
 ; This table contains a lookup of all of the system calls that we expose.
 ~e9 ~9a ~01 ; jmp os_print_string               ; 0x03
+~e9 ~b7 ~01 ; jmp os_print_line                 ; 0x06
+~e9 ~d4 ~01 ; jmp os_print_newline              ; 0x09
+~e9 ~f1 ~01 ; jmp os_print_char                 ; 0x0c
 
 
 ; times 0x60 - ($ - $$) db 0
 
-                        ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                                              ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -40,12 +44,13 @@
 ; 0x60
 ; data_start:
 ; str_hello:
-;     db `Hello, world!\r\n`, 0
-~48 ~65 ~6c ~6c ~6f   ~2c ~20 ~77 ~6f ~72 ~6c ~64 ~21 ~0d ~0a ~00
+;     db `Hello, world!`, 0
+~48 ~65 ~6c ~6c ~6f ~2c ~20 ~77   ~6f ~72 ~6c ~64 ~21 ~00
 
 ; End the data section at the 256th byte (0x100)
 ; times 0x100 - ($ - $$) db 0
 
+                                                          ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -87,7 +92,7 @@
     ; Print hello world
 
 ~68 ~60 ~00 ; push str_hello
-~b8 ~03 ~00 ; mov ax, os_print_string
+~b8 ~06 ~00 ; mov ax, os_print_line
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
 
@@ -151,3 +156,86 @@
 ; times 0x01c0 - ($ - $$) db 0
 
                                       ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x1c0
+; ------------------------------------------------------------------------------
+; os_print_line(str)
+;   Prints a string to the console, followed by a CR/LF combination.
+;
+;   Input
+;     str - null terminated string to print
+;
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_line:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~ff ~76 ~04 ; push word [bp + 4]
+~b8 ~03 ~00 ; mov ax, os_print_string
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~b8 ~09 ~00 ; mov ax, os_print_newline
+~ff ~d0     ; call ax
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x1e0 - ($ - $$) db 0
+                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x1e0
+; ------------------------------------------------------------------------------
+; os_print_newline()
+;   Prints a CR/LF combination.
+;
+;   Input
+;     Nothing
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_newline:
+~6a ~0d     ; push `\r`
+~b8 ~0c ~00 ; mov ax, os_print_char
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~6a ~0a     ; push `\n`
+~b8 ~0c ~00 ; mov ax, os_print_char
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~c3         ; ret
+
+; times 0x200 - ($ - $$) db 0
+                    ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x200
+; ------------------------------------------------------------------------------
+; os_print_char(char)
+;   Prints a character to the console.
+;
+;   Input
+;     char - character to print
+;
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_char:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~60         ; pusha
+~b4 ~0e     ; mov ah, 0x0e        ; INT 10h, AH=0Eh: write text in teletype mode
+~31 ~db     ; xor bx, bx          ; BH = 0 page number (text modes) and
+            ;                     ; BL = 0 foreground color (graphics modes only)
+~8a ~46 ~04 ; mov al, [bp + 4]
+~cd ~10     ; int 0x10            ; print the character
+~61         ; popa
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x210
