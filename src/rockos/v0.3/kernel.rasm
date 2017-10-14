@@ -3,32 +3,62 @@
 ; --------------------------------
 ; Copyright (c) 2017 Justin Rockwood. All rights reserved.
 ;
+; We're starting a pattern of leaving gaps between functions in case we need to
+; extend them in the future. This ensures that we don't have to change memory
+; addresses if we change the code. The 'times' command will do that for us, but
+; we don't have an assembler yet, so we have to do it manually by filling in
+; zeros.
+;
 
 ; [BITS 16]               ; Tells the assembler to generate 16 bit code
 
 ; start:
-~eb ~7e     ; jmp kernel_main
+~e9 ~fd ~00 ; jmp near kernel_main  ; keep to 3 bytes
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; System Calls Lookup
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; sys_call_table:
+; This table contains a lookup of all of the system calls that we expose.
+~e9 ~9a ~01 ; jmp os_print_string               ; 0x03
+
+
+; times 0x60 - ($ - $$) db 0
+
+                        ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Data Section
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+; 0x60
+; data_start:
 ; str_hello:
 ;     db `Hello, world!\r\n`, 0
-         ~48 ~65 ~6c ~6c ~6f   ~2c ~20 ~77 ~6f ~72 ~6c ~64 ~21 ~0d
-~0a ~00
+~48 ~65 ~6c ~6c ~6f   ~2c ~20 ~77 ~6f ~72 ~6c ~64 ~21 ~0d ~0a ~00
 
-; Keep the data section to 128 bytes so that it's easy to calculate the jump offset.
-; times 128 - ($ - $$) db 0
+; End the data section at the 256th byte (0x100)
+; times 0x100 - ($ - $$) db 0
 
-        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
-~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x100
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -56,8 +86,10 @@
     ; --------------------------------------------------------------------------
     ; Print hello world
 
-~be ~02 ~00 ; mov si, str_hello
-~e8 ~02 ~00 ; call os_print_string
+~68 ~60 ~00 ; push str_hello
+~b8 ~03 ~00 ; mov ax, os_print_string
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
 
     ; --------------------------------------------------------------------------
     ; We're done
@@ -66,24 +98,56 @@
 ~f4         ; hlt
 
 ; ------------------------------------------------------------------------------
-; os_print_string
+
+; Start the system calls at 0x01a0.
+; times 0x01a0 - ($ - $$) db 0
+
+    ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; System Calls
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; 0x1a0
+; ------------------------------------------------------------------------------
+; os_print_string(str)
 ;   Prints a string to the console.
 ;
 ;   Input
-;     DS:SI - null terminated string to print
+;     str - null terminated string to print
+;
+;   Returns
+;     Nothing
 ; ------------------------------------------------------------------------------
 
 ; os_print_string:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
 ~60         ; pusha
-~b4 ~0e     ; mov ah, 0x0e        ; int 0x10,e = write text in teletype mode
-~31 ~db     ; xor bx, bx          ; bh = 0 page number (text modes) and
-            ;                     ; bl = 0 foreground color (graphics modes only)
+~8b ~76 ~04 ; mov si, [bp + 4]    ; SI = str
+~b4 ~0e     ; mov ah, 0x0e        ; INT 10h, AH=0Eh: write text in teletype mode
+~31 ~db     ; xor bx, bx          ; BH = 0 page number (text modes) and
+            ;                     ; BL = 0 foreground color (graphics modes only)
 ; .nextChar:
-~ac         ; lodsb               ; loads the byte at ds:si to al and increment si
+~ac         ; lodsb               ; loads the byte at DS:SI to AL and increment SI
 ~08 ~c0     ; or al, al           ; see if we've read the null termination
 ~74 ~04     ; jz .exit
 ~cd ~10     ; int 0x10            ; print the character
 ~eb ~f7     ; jmp .nextChar
 ; .exit:
 ~61         ; popa
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
 ~c3         ; ret
+
+; times 0x01c0 - ($ - $$) db 0
+
+                                      ~00 ~00 ~00 ~00 ~00 ~00 ~00

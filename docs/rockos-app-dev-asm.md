@@ -80,3 +80,18 @@ caller:
   ; return
   ret
 ```
+
+
+
+
+Screen
+--------------------------------------------------------------------------------
+
+### `os_print_string(str)`
+Prints a null-terminated string to the screen.
+
+|                |                           |
+|----------------|---------------------------|
+| **Address**    | 0x03                      |
+| **Parameters** | `str` - address of string |
+| **Returns**    | Nothing                   |
