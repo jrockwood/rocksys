@@ -9,16 +9,9 @@ like file system access and memory management.
 Memory Map
 --------------------------------------------------------------------------------
 
-*Summarized from the [OSDev wiki](http://wiki.osdev.org/Memory_Map_%28x86%29)
-and from [a CMU lecture on OSes](http://www.cs.cmu.edu/~410-s07/p4/p4-boot.pdf)*
-
-The following table shows the state of the physical memory when the BIOS jumps
-into the bootloader code.
-
-![Memory map](rockos-memory-map.png "Memory map")
-
 We'll use the memory from `0x0000:7E00` to `0x2000:FFFF` for our bootloader and
-kernel. The memory map for this section is below, which is 32KB of total memory.
+kernel. The memory map for this section is below, which is 64KB of total memory,
+or in other words a single segment.
 
 _The address is a half-open range, not including the ending number_
 
@@ -92,3 +85,77 @@ the floppy disk with the bootloader and the kernel.
 
 Same as last time, from this point on, if you don't see a Building and Running
 section, assume it's the same process.
+
+
+
+### Version 0.3 - Launching the assembler
+
+We now have a working bootloader and the start of a kernel. It's still a pain to
+manually hand-assemble the code, especially in figuring out jump and call
+instructions where you have to count how many bytes are between the jump and the
+call. It also makes it hard to maintain that code since adding additional
+instructions means you have to recalculate all of the offsets. We need an
+assembler!
+
+Let's add another layer by having the kernel automatically load another few
+sectors from the disk (our assembler) and then start running it. Because we
+don't want to get into a full-blown general-purpose disk reading routine yet
+(that will come very soon), we'll load the assembler from sector 5 so we don't
+have to translate cylinders-head-sectors (CHS) into a logical block address
+(LBA). Sector 5 is still within the first cylinder.
+
+**OS Services**
+
+We will load the assembler code from sector 50 on the disk into memory location
+`0x2000:8000`, which is the starting address for external programs in our memory
+map. We will set the necessary segment registers and set up the stack so the
+external programs won't have to worry about it.
+
+We will start executing the assembler by using a `call` instruction to an
+absolute memory location (`0x2000:8000`), so in order to return back to the
+kernel the assembler will use the `ret` instruction.
+
+Additionally, RockOS will expose some functions for external programs to use.
+They are in the same segment as the programs so they can simply use a `call`
+instruction with an absolute address and not have to worry about the segment.
+Internally, we'll implement a table of public functions as a series of `jmp`
+instructions to the start of each function. That allows the kernel to change
+without requiring the external programs to change.
+
+See the `rockos-app-dev-asm.md` file for a description of all of the system
+calls that are exposed by the kernel.
+
+**Bootloader**
+
+The bootloader doesn't need to change much for this version. Since we're adding
+OS system calls to the kernel, it's grown past a single sector on the disk, so
+we'll need to load at least 2 sectors instead of 1. To match our proposed memory
+map, we should be loading 12KB of the kernal from disk into memory. However,
+doing that is slightly more complex because we can't load that much at once due
+to limitations of the `INT 13h, AH=02h` BIOS call. For now, let's just load 3
+sectors, which should tide us over until we get the kernel loading and the basic
+assembler going.
+
+**Building**
+
+Since we're now starting to build the assembler, the `build.cmd` file will move
+to the `src/rockasm` directories. The assembler will use a specific version of
+the OS depending on which system services it needs.
+
+
+References
+--------------------------------------------------------------------------------
+
+* [OSDev wiki](http://wiki.osdev.org) - Great resource for lots of various
+  low-level operating system concepts.
+  * [OSDev wiki memory map](http://wiki.osdev.org/Memory_Map_%28x86%29)
+* [CMU lecture on OSes](http://www.cs.cmu.edu/~410-s07/p4/p4-boot.pdf) - Pretty
+  good overview of writing a bootloader.
+* [MikeOS](http://mikeos.sourceforge.net/) - Lots of concepts were borrowed from
+  here.
+* [Ralph Brown's Interrupt List](http://www.delorie.com/djgpp/doc/rbinter/) -
+  Lists all of the Intel processor interrupts needed for printing strings,
+  keyboard input, and generally working with the hardware.
+* [Intel Instruction Set Reference](http://faydoc.tripod.com/cpu/index_a.htm) -
+  This is not the official source, but I found it to be nice to be able to
+  quickly find instructions.
