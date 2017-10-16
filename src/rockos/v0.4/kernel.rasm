@@ -1,0 +1,287 @@
+;
+; kernel.rasm (Rockwood OS Kernel)
+; --------------------------------
+; Copyright (c) 2017 Justin Rockwood. All rights reserved.
+;
+; We're starting a pattern of leaving gaps between functions in case we need to
+; extend them in the future. This ensures that we don't have to change memory
+; addresses if we change the code. The 'times' command will do that for us, but
+; we don't have an assembler yet, so we have to do it manually by filling in
+; zeros.
+;
+
+; [BITS 16]               ; Tells the assembler to generate 16 bit code
+
+; start:
+~e9 ~fd ~00 ; jmp near kernel_main  ; keep to 3 bytes
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; System Calls Lookup
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; sys_call_table:
+; This table contains a lookup of all of the system calls that we expose.
+~e9 ~9a ~01 ; jmp os_print_string               ; 0x03
+~e9 ~b7 ~01 ; jmp os_print_line                 ; 0x06
+~e9 ~d4 ~01 ; jmp os_print_newline              ; 0x09
+~e9 ~f1 ~01 ; jmp os_print_char                 ; 0x0c
+
+
+; times 0x60 - ($ - $$) db 0
+
+                                                              ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Data Section
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; 0x60
+; data_start:
+; str_exiting:
+;     db `Exiting RockOS`, 0
+~45 ~78 ~69 ~74 ~69 ~6e ~67 ~20   ~52 ~6f ~63 ~6b ~4f ~53 ~00
+
+
+; End the data section at the 256th byte (0x100)
+; times 0x100 - ($ - $$) db 0
+
+                                                              ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x100
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Program
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; kernel_main:
+    ; --------------------------------------------------------------------------
+    ; The bootloader loads us at address 0x2000:0000, so set up the segment
+    ; registers to all point to the same segment.
+
+~fa         ; cli                 ; disable interrupts
+~8c ~c8     ; mov ax, cs
+~8e ~d8     ; mov ds, ax
+~8e ~c0     ; mov es, ax
+~8e ~e0     ; mov fs, ax
+~8e ~e8     ; mov gs, ax
+
+    ; --------------------------------------------------------------------------
+    ; Create the stack at 0x2000:FFFF. It will move down in memory addresses.
+
+~b8 ~00 ~20 ; mov ax, 0x2000
+~8e ~d0     ; mov ss, ax
+~bc ~ff ~ff ; mov sp, 0xffff
+~fb         ; sti                 ; restore interrupts
+
+    ; --------------------------------------------------------------------------
+    ; Load the rockasm code from the 5th sector (1-based) to address
+    ; 0x2000:8000 and then start executing it.
+
+~bb ~00 ~80 ; mov bx, 0x8000      ; copy to address 0x2000:8000 (ES:BX)
+~b0 ~01     ; mov al, 1           ; AL = number of sectors to read
+~b1 ~05     ; mov cl, 5           ; CL = sector number to read (1-based)
+~e8 ~32 ~00 ; call read_sectors
+~ff ~d3     ; call bx
+
+    ; --------------------------------------------------------------------------
+    ; We're done
+
+~b8 ~09 ~00 ; mov ax, os_print_newline
+~ff ~d0     ; call ax
+~68 ~60 ~00 ; push str_exiting
+~b8 ~06 ~00 ; mov ax, os_print_line
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~fa         ; cli
+~f4         ; hlt
+
+; times 0x150 - ($ - $$) db 0
+
+        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x150
+; ------------------------------------------------------------------------------
+; read_sectors
+;   Reads the number of sectors from the floppy disk to the target address.
+;
+;   Input
+;     AL - number of sectors to read
+;     CL - sector number to read (1-based)
+;     ES:BX - destination address
+; ------------------------------------------------------------------------------
+
+; read_sectors:
+~60         ; pusha
+
+    ; --------------------------------------------------------------------------
+    ; Reset the floppy disk so the head is at sector 0.
+
+; .resetFloppy:
+~b2 ~00     ; mov dl, 0           ; drive 0 = "A:", the first floppy drive
+~b4 ~00     ; mov ah, 0
+~cd ~13     ; int 0x13            ; INT 13h, AH=00h: reset disk drive
+~72 ~f8     ; jc .resetFloppy     ; try again if there was an error (CF is set)
+
+    ; --------------------------------------------------------------------------
+    ; Read the sectors from the floppy.
+
+~b5 ~00     ; mov ch, 0           ; CH = cylinder
+~b6 ~00     ; mov dh, 0           ; DH = head number
+~b2 ~00     ; mov dl, 0           ; DL = drive number
+; .read:
+~50         ; push ax
+~b4 ~02     ; mov ah, 0x2
+~cd ~13     ; int 0x13            ; INT 13h, AH=02h: read sectors from drive
+~58         ; pop ax
+~72 ~f8     ; jc .read            ; try again if there was an error (CF is set)
+
+~61         ; popa
+~c3         ; ret
+
+; Start the system calls at 0x01a0.
+; times 0x01a0 - ($ - $$) db 0
+
+                                      ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; System Calls
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; 0x1a0
+; ------------------------------------------------------------------------------
+; os_print_string(str)
+;   Prints a string to the console.
+;
+;   Input
+;     str - null terminated string to print
+;
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_string:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~60         ; pusha
+~8b ~76 ~04 ; mov si, [bp + 4]    ; SI = str
+~b4 ~0e     ; mov ah, 0x0e        ; INT 10h, AH=0Eh: write text in teletype mode
+~31 ~db     ; xor bx, bx          ; BH = 0 page number (text modes) and
+            ;                     ; BL = 0 foreground color (graphics modes only)
+; .nextChar:
+~ac         ; lodsb               ; loads the byte at DS:SI to AL and increment SI
+~08 ~c0     ; or al, al           ; see if we've read the null termination
+~74 ~04     ; jz .exit
+~cd ~10     ; int 0x10            ; print the character
+~eb ~f7     ; jmp .nextChar
+; .exit:
+~61         ; popa
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x01c0 - ($ - $$) db 0
+
+                                      ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x1c0
+; ------------------------------------------------------------------------------
+; os_print_line(str)
+;   Prints a string to the console, followed by a CR/LF combination.
+;
+;   Input
+;     str - null terminated string to print
+;
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_line:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~ff ~76 ~04 ; push word [bp + 4]
+~b8 ~03 ~00 ; mov ax, os_print_string
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~b8 ~09 ~00 ; mov ax, os_print_newline
+~ff ~d0     ; call ax
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x1e0 - ($ - $$) db 0
+                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x1e0
+; ------------------------------------------------------------------------------
+; os_print_newline()
+;   Prints a CR/LF combination.
+;
+;   Input
+;     Nothing
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_newline:
+~6a ~0d     ; push `\r`
+~b8 ~0c ~00 ; mov ax, os_print_char
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~6a ~0a     ; push `\n`
+~b8 ~0c ~00 ; mov ax, os_print_char
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~c3         ; ret
+
+; times 0x200 - ($ - $$) db 0
+                    ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x200
+; ------------------------------------------------------------------------------
+; os_print_char(char)
+;   Prints a character to the console.
+;
+;   Input
+;     char - character to print
+;
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_char:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~60         ; pusha
+~b4 ~0e     ; mov ah, 0x0e        ; INT 10h, AH=0Eh: write text in teletype mode
+~31 ~db     ; xor bx, bx          ; BH = 0 page number (text modes) and
+            ;                     ; BL = 0 foreground color (graphics modes only)
+~8a ~46 ~04 ; mov al, [bp + 4]
+~cd ~10     ; int 0x10            ; print the character
+~61         ; popa
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x210

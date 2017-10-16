@@ -1,0 +1,177 @@
+;
+; bootload.rasm (Rockwood OS Bootloader)
+; --------------------------------------
+; This version loads the kernel from disk into memory and starts executing it.
+;
+; Copyright (c) 2017 Justin Rockwood. All rights reserved.
+;
+
+; [BITS 16]               ; Tells the assembler to generate 16 bit code
+
+; A device is "bootable" if it carries a boot sector with the byte sequence
+; 0x55, 0xAA in bytes 511 and 512 respectively. When the BIOS finds such a boot
+; sector, it is loaded into memory at a specific location; this is usually
+; 0x0000:0x7c00 (segment 0, address 0x7c00). However, some BIOS' load to
+; 0x7c0:0x0000 (segment 0x07c0, offset 0), which resolves to the same physical
+; address, but can be surprising.
+;
+; When the wrong CS:IP pair is assumed, absolute near jumps will not work
+; properly, and any code like mov ax,cs; mov ds,ax will result in unexpected
+; variable locations. A good practice is to enforce CS:IP at the very start of
+; the boot sector, which we do doing a far jump to an absolute address.
+
+; [ORG 0x7C00]            ; We'll set the segment registers later to point to
+                          ; the right addresses
+
+; start:
+~ea ~80 ~7c ~00 ~00 ; jmp 0x00:main       ; do a far jump to set CS:IP correctly
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Data Section
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; 0x7c05
+; str_banner:
+;     db `RockOS 0.3\r\n`, 0
+                    ~52 ~6f ~63   ~6b ~4f ~53 ~20 ~30 ~2e ~33 ~0d
+~0a ~00
+
+; 0x7c12
+; str_copyright:
+;     db `Copyright (c) 2017 Justin Rockwood. All rights reserved.\r\n\r\n`, 0
+        ~43 ~6f ~70 ~79 ~72 ~69   ~67 ~68 ~74 ~20 ~28 ~63 ~29 ~20
+~32 ~30 ~31 ~37 ~20 ~4a ~75 ~73   ~74 ~69 ~6e ~20 ~52 ~6f ~63 ~6b
+~77 ~6f ~6f ~64 ~2e ~20 ~41 ~6c   ~6c ~20 ~72 ~69 ~67 ~68 ~74 ~73
+~20 ~72 ~65 ~73 ~65 ~72 ~76 ~65   ~64 ~2e ~0d ~0a ~0d ~0a ~00
+
+; Keep the data section to 128 bytes so that it's easy to calculate the jump offset.
+; times 128 - ($ - $$) db 0
+                                                              ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Program
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; main:
+    ; --------------------------------------------------------------------------
+    ; The BIOS loads us at address 0000:7C00, so set up the segment registers
+    ; to all point to the same segment.
+
+~fa         ; cli                 ; disable interrupts
+~8c ~c8     ; mov ax, cs
+~8e ~d8     ; mov ds, ax
+~8e ~c0     ; mov es, ax
+~8e ~e0     ; mov fs, ax
+~8e ~e8     ; mov gs, ax
+
+    ; --------------------------------------------------------------------------
+    ; Create the stack at 0x2000:FFFF. It will move down in memory addresses.
+
+~b8 ~00 ~20 ; mov ax, 0x2000
+~8e ~d0     ; mov ss, ax
+~bc ~ff ~ff ; mov sp, 0xffff
+~fb         ; sti                 ; restore interrupts
+
+    ; --------------------------------------------------------------------------
+    ; Display the loading message.
+
+~be ~05 ~7c ; mov si, str_banner
+~e8 ~1a ~00 ; call print_string
+~be ~12 ~7c ; mov si, str_copyright
+~e8 ~14 ~00 ; call print_string
+
+    ; --------------------------------------------------------------------------
+    ; Load the kernel from sector 2 into memory address 0x2000:0000 and then
+    ; start executing it.
+
+~b8 ~00 ~20 ; mov ax, 0x2000
+~8e ~c0     ; mov es, ax          ; copy to address 0x2000:0000 (ES:BX)
+~bb ~00 ~00 ; mov bx, 0
+~b0 ~03     ; mov al, 3           ; AL = number of sectors to read
+~b1 ~02     ; mov cl, 2           ; CL = sector number to read (1-based)
+~e8 ~13 ~00 ; call read_sectors
+~ea ~00 ~00 ~00 ~20 ; jmp 0x2000:0x0000   ; start executing the kernel
+
+; ------------------------------------------------------------------------------
+; print_string (14 bytes)
+;   Prints a string to the console.
+;
+;   Input
+;     DS:SI - null terminated string to print
+; ------------------------------------------------------------------------------
+
+; print_string:
+~b4 ~0e     ; mov ah, 0x0e        ; int 0x10,e = write text in teletype mode
+~31 ~db     ; xor bx, bx          ; bh = 0 page number (text modes) and
+            ;                     ; bl = 0 foreground color (graphics modes only)
+; .nextChar:
+~ac         ; lodsb               ; loads the byte at ds:si to al and increment si
+~08 ~c0     ; or al, al           ; see if we've read the null termination
+~74 ~04     ; jz .exit
+~cd ~10     ; int 0x10            ; print the character
+~eb ~f7     ; jmp .nextChar
+; .exit:
+~c3         ; ret
+
+; ------------------------------------------------------------------------------
+; read_sectors
+;   Reads the number of sectors from the floppy disk to the target address.
+;
+;   Input
+;     AL - number of sectors to read
+;     CL - sector number to read (1-based)
+;     ES:BX - destination address
+; ------------------------------------------------------------------------------
+
+; read_sectors:
+    ; --------------------------------------------------------------------------
+    ; Reset the floppy disk so the head is at sector 0.
+
+; .resetFloppy:
+~b2 ~00     ; mov dl, 0           ; drive 0 = "A:", the first floppy drive
+~b4 ~00     ; mov ah, 0
+~cd ~13     ; int 0x13            ; INT 13h, AH=00h: reset disk drive
+~72 ~f8     ; jc .resetFloppy     ; try again if there was an error (CF is set)
+
+    ; --------------------------------------------------------------------------
+    ; Read the sectors from the floppy.
+
+~b5 ~00     ; mov ch, 0           ; CH = cylinder
+~b6 ~00     ; mov dh, 0           ; DH = head number
+~b2 ~00     ; mov dl, 0           ; DL = drive number
+; .read:
+~50         ; push ax
+~b4 ~02     ; mov ah, 0x2
+~cd ~13     ; int 0x13            ; INT 13h, AH=02h: read sectors from drive
+~58         ; pop ax
+~72 ~f8     ; jc .read            ; try again if there was an error (CF is set)
+~c3         ; ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Bootloader Suffix
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; times 510 - ($ - $$) db 0           ; Fill the rest of sector with 0
+                                      ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00
+
+~55 ~aa     ; dw 0xAA55                           ; Add boot signature at the end of bootloader
