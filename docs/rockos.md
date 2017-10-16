@@ -98,7 +98,11 @@ instructions means you have to recalculate all of the offsets. We need an
 assembler!
 
 Let's add another layer by having the kernel automatically load another few
-sectors from the disk (our assembler) and then start running it.
+sectors from the disk (our assembler) and then start running it. Because we
+don't want to get into a full-blown general-purpose disk reading routine yet
+(that will come very soon), we'll load the assembler from sector 5 so we don't
+have to translate cylinders-head-sectors (CHS) into a logical block address
+(LBA). Sector 5 is still within the first cylinder.
 
 **OS Services**
 
@@ -131,6 +135,12 @@ doing that is slightly more complex because we can't load that much at once due
 to limitations of the `INT 13h, AH=02h` BIOS call. For now, let's just load 3
 sectors, which should tide us over until we get the kernel loading and the basic
 assembler going.
+
+**Building**
+
+Since we're now starting to build the assembler, the `build.cmd` file will move
+to the `src/rockasm` directories. The assembler will use a specific version of
+the OS depending on which system services it needs.
 
 
 References

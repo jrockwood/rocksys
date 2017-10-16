@@ -1,0 +1,78 @@
+;
+; rockasm.rasm (Rockwood Assembler)
+; ---------------------------------
+; This version simply prints the banner and copyright information to the screen
+; using OS-supplied functions to print. After it's done, it will return to the
+; kernel.
+;
+; Copyright (c) 2017 Justin Rockwood. All rights reserved.
+;
+
+; [BITS 16]               ; Tells the assembler to use 16 bit code
+; [ORG 0x8000]            ; The kernel will load us into this address
+
+; start:
+~eb ~7e     ; jmp main
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Data Section
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; 0x8002
+; str_banner:
+;     db `RockAsm 0.1 - Rockwood Assembler`, 0
+        ~52 ~6f ~63 ~6b ~41 ~73   ~6d ~20 ~30 ~2e ~31 ~20 ~2d ~20
+~52 ~6f ~63 ~6b ~77 ~6f ~6f ~64   ~20 ~41 ~73 ~73 ~65 ~6d ~62 ~6c
+~65 ~72 ~00
+
+; 0x8023
+; str_copyright:
+;     db `Copyright (c) 2017 Justin Rockwood. All rights reserved.`, 0
+            ~43 ~6f ~70 ~79 ~72   ~69 ~67 ~68 ~74 ~20 ~28 ~63 ~29
+~20 ~32 ~30 ~31 ~37 ~20 ~4a ~75   ~73 ~74 ~69 ~6e ~20 ~52 ~6f ~63
+~6b ~77 ~6f ~6f ~64 ~2e ~20 ~41   ~6c ~6c ~20 ~72 ~69 ~67 ~68 ~74
+~73 ~20 ~72 ~65 ~73 ~65 ~72 ~76   ~65 ~64 ~2e ~00
+
+; 0x805c
+; str_done:
+;     db `Done`, 0
+                                                  ~44 ~6f ~6e ~65
+~00
+
+; End the data section at 0x80
+; times 0x80 - ($ - $$) db 0
+
+    ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x80
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Program
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; main:
+    ; --------------------------------------------------------------------------
+    ; Display the loading message.
+
+~68 ~02 ~80 ; push str_banner
+~b8 ~06 ~00 ; mov ax, os_print_line
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~68 ~23 ~80 ; push str_copyright
+~b8 ~06 ~00 ; mov ax, os_print_line
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~b8 ~09 ~00 ; mov ax, os_print_newline
+~ff ~d0     ; call ax
+
+    ; --------------------------------------------------------------------------
+    ; We're done so print a message and then return to the OS.
+
+; .finished:
+~68 ~5c ~80 ; push str_done
+~b8 ~06 ~00 ; mov ax, os_print_line
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+
+; mainExit:
+~c3         ; ret
