@@ -90,7 +90,7 @@
 ~b8 ~00 ~20 ; mov ax, 0x2000
 ~8e ~c0     ; mov es, ax          ; copy to address 0x2000:0000 (ES:BX)
 ~bb ~00 ~00 ; mov bx, 0
-~b0 ~01     ; mov al, 1           ; AL = number of sectors to read
+~b0 ~03     ; mov al, 3           ; AL = number of sectors to read
 ~b1 ~02     ; mov cl, 2           ; CL = sector number to read (1-based)
 ~e8 ~13 ~00 ; call read_sectors
 ~ea ~00 ~00 ~00 ~20 ; jmp 0x2000:0x0000   ; start executing the kernel
