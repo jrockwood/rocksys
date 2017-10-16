@@ -43,18 +43,22 @@
 
 ; 0x60
 ; data_start:
+; str_starting_kernel:
+;     db `Starting kernel...`, 0
+~53 ~74 ~61 ~72 ~74 ~69 ~6e ~67   ~20 ~6b ~65 ~72 ~6e ~65 ~6c ~2e
+~2e ~2e ~00
+
+; 0x73
 ; str_exiting:
 ;     db `Exiting RockOS`, 0
-~45 ~78 ~69 ~74 ~69 ~6e ~67 ~20   ~52 ~6f ~63 ~6b ~4f ~53 ~00
+            ~45 ~78 ~69 ~74 ~69   ~6e ~67 ~20 ~52 ~6f ~63 ~6b ~4f
+~53 ~00
 
 
 ; End the data section at the 256th byte (0x100)
 ; times 0x100 - ($ - $$) db 0
 
-                                                              ~00
-~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
-
-~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -89,6 +93,11 @@
 ~bc ~ff ~ff ; mov sp, 0xffff
 ~fb         ; sti                 ; restore interrupts
 
+~68 ~60 ~00 ; push str_starting_kernel
+~b8 ~06 ~00 ; mov ax, os_print_line
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+
     ; --------------------------------------------------------------------------
     ; Load the rockasm code from the 5th sector (1-based) to address
     ; 0x2000:8000 and then start executing it.
@@ -96,7 +105,7 @@
 ~bb ~00 ~80 ; mov bx, 0x8000      ; copy to address 0x2000:8000 (ES:BX)
 ~b0 ~01     ; mov al, 1           ; AL = number of sectors to read
 ~b1 ~05     ; mov cl, 5           ; CL = sector number to read (1-based)
-~e8 ~32 ~00 ; call read_sectors
+~e8 ~27 ~00 ; call read_sectors
 ~ff ~d3     ; call bx
 
     ; --------------------------------------------------------------------------
@@ -104,7 +113,7 @@
 
 ~b8 ~09 ~00 ; mov ax, os_print_newline
 ~ff ~d0     ; call ax
-~68 ~60 ~00 ; push str_exiting
+~68 ~73 ~00 ; push str_exiting
 ~b8 ~06 ~00 ; mov ax, os_print_line
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
@@ -113,7 +122,7 @@
 
 ; times 0x150 - ($ - $$) db 0
 
-        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                                      ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ; 0x150
