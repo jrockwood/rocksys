@@ -143,6 +143,18 @@ to the `src/rockasm` directories. The assembler will use a specific version of
 the OS depending on which system services it needs.
 
 
+
+### Version 0.4 - Rudimentary Debugging
+
+I originally started working on what is now version 0.5, which adds a
+non-trivial amount of new code and quickly got frustrated at the lack of basic
+tools to help debug my code. So, we're going to add some system calls to print
+the contents of the registers and segments of memory.
+
+We need some helper functions to convert numbers to hex strings, which we'll add
+first. Then the debugging functions.
+
+
 References
 --------------------------------------------------------------------------------
 

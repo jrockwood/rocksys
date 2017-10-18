@@ -1,0 +1,595 @@
+;
+; kernel.rasm (Rockwood OS Kernel)
+; --------------------------------
+; Copyright (c) 2017 Justin Rockwood. All rights reserved.
+;
+; We're starting a pattern of leaving gaps between functions in case we need to
+; extend them in the future. This ensures that we don't have to change memory
+; addresses if we change the code. The 'times' command will do that for us, but
+; we don't have an assembler yet, so we have to do it manually by filling in
+; zeros.
+;
+
+; [BITS 16]               ; Tells the assembler to generate 16 bit code
+
+; start:
+~e9 ~fd ~00 ; jmp near kernel_main  ; keep to 3 bytes
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; System Calls Lookup
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; sys_call_table:
+; This table contains a lookup of all of the system calls that we expose.
+~e9 ~9a ~01 ; jmp os_print_string               ; 0x03
+~e9 ~b7 ~01 ; jmp os_print_line                 ; 0x06
+~e9 ~d4 ~01 ; jmp os_print_newline              ; 0x09
+~e9 ~f1 ~01 ; jmp os_print_char                 ; 0x0c
+~e9 ~0e ~02 ; jmp os_print_space                ; 0x0f
+~e9 ~1b ~02 ; jmp os_print_hex_nibble           ; 0x12
+~e9 ~58 ~02 ; jmp os_print_hex_byte             ; 0x15
+~e9 ~85 ~02 ; jmp os_print_hex_word             ; 0x18
+~e9 ~b2 ~02 ; jmp os_print_registers            ; 0x1b
+~e9 ~1f ~03 ; jmp os_print_memory               ; 0x1e
+
+; times 0x60 - ($ - $$) db 0
+
+    ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Data Section
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; 0x60
+; data_start:
+; str_starting_kernel:
+;     db `Starting kernel...`, 0
+~53 ~74 ~61 ~72 ~74 ~69 ~6e ~67   ~20 ~6b ~65 ~72 ~6e ~65 ~6c ~2e
+~2e ~2e ~00
+
+; 0x73
+; str_exiting:
+;     db `Exiting RockOS`, 0
+            ~45 ~78 ~69 ~74 ~69   ~6e ~67 ~20 ~52 ~6f ~63 ~6b ~4f
+~53 ~00
+
+; 0x82
+    ~41 ~58 ~3a ~20 ~00 ; str_ax: db `AX: `, 0
+~20 ~42 ~58 ~3a ~20 ~00 ; str_bx: db ` BX: `, 0
+~20 ~43 ~58 ~3a ~20 ~00 ; str_cx: db ` CX: `, 0
+~20 ~44 ~58 ~3a ~20 ~00 ; str_dx: db ` DX: `, 0
+~20 ~53 ~49 ~3a ~20 ~00 ; str_si: db ` SI: `, 0
+~20 ~44 ~49 ~3a ~20 ~00 ; str_di: db ` DI: `, 0
+; 0xa5
+    ~43 ~53 ~3a ~20 ~00 ; str_cs: db `CS: `, 0
+~20 ~44 ~53 ~3a ~20 ~00 ; str_ds: db ` DS: `, 0
+~20 ~45 ~53 ~3a ~20 ~00 ; str_es: db ` ES: `, 0
+~20 ~46 ~53 ~3a ~20 ~00 ; str_fs: db ` FS: `, 0
+~20 ~47 ~53 ~3a ~20 ~00 ; str_gs: db ` GS: `, 0
+~20 ~53 ~53 ~3a ~20 ~00 ; str_ss: db ` SS: `, 0
+~20 ~53 ~50 ~3a ~20 ~00 ; str_sp: db ` SP: `, 0
+
+; End the data section at the 256th byte (0x100)
+; times 0x100 - ($ - $$) db 0
+
+                                                      ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x100
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Program
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; kernel_main:
+    ; --------------------------------------------------------------------------
+    ; The bootloader loads us at address 0x2000:0000, so set up the segment
+    ; registers to all point to the same segment.
+
+~fa         ; cli                 ; disable interrupts
+~8c ~c8     ; mov ax, cs
+~8e ~d8     ; mov ds, ax
+~8e ~c0     ; mov es, ax
+~8e ~e0     ; mov fs, ax
+~8e ~e8     ; mov gs, ax
+
+    ; --------------------------------------------------------------------------
+    ; Create the stack at 0x2000:FFFF. It will move down in memory addresses.
+
+~b8 ~00 ~20 ; mov ax, 0x2000
+~8e ~d0     ; mov ss, ax
+~bc ~ff ~ff ; mov sp, 0xffff
+~fb         ; sti                 ; restore interrupts
+
+~68 ~60 ~00 ; push str_starting_kernel
+~b8 ~06 ~00 ; mov ax, os_print_line
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+
+    ; --------------------------------------------------------------------------
+    ; Load the rockasm code from the 5th sector (1-based) to address
+    ; 0x2000:8000 and then start executing it.
+
+~bb ~00 ~80 ; mov bx, 0x8000      ; copy to address 0x2000:8000 (ES:BX)
+~b0 ~01     ; mov al, 1           ; AL = number of sectors to read
+~b1 ~05     ; mov cl, 5           ; CL = sector number to read (1-based)
+~e8 ~37 ~00 ; call read_sectors
+
+
+~b8 ~1b ~00 ; mov ax, os_print_registers
+~ff ~d0     ; call ax
+~b8 ~09 ~00 ; mov ax, os_print_newline
+~ff ~d0     ; call ax
+~6a ~04     ; push 4              ; line_count
+~68 ~00 ~80 ; push 0x8000         ; address
+~b8 ~1e ~00 ; mov ax, os_print_memory
+~ff ~d0     ; call ax
+~83 ~c4 ~04 ; add sp, 4
+
+~bb ~00 ~80 ; mov bx, 0x8000      ; copy to address 0x2000:8000 (ES:BX)
+~ff ~d3     ; call bx
+
+    ; --------------------------------------------------------------------------
+    ; We're done
+
+~b8 ~09 ~00 ; mov ax, os_print_newline
+~ff ~d0     ; call ax
+~68 ~73 ~00 ; push str_exiting
+~b8 ~06 ~00 ; mov ax, os_print_line
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~fa         ; cli
+~f4         ; hlt
+
+; times 0x160 - ($ - $$) db 0
+
+                                                      ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x160
+; ------------------------------------------------------------------------------
+; read_sectors
+;   Reads the number of sectors from the floppy disk to the target address.
+;
+;   Input
+;     AL - number of sectors to read
+;     CL - sector number to read (1-based)
+;     ES:BX - destination address
+; ------------------------------------------------------------------------------
+
+; read_sectors:
+~60         ; pusha
+
+    ; --------------------------------------------------------------------------
+    ; Reset the floppy disk so the head is at sector 0.
+
+; .resetFloppy:
+~b2 ~00     ; mov dl, 0           ; drive 0 = "A:", the first floppy drive
+~b4 ~00     ; mov ah, 0
+~cd ~13     ; int 0x13            ; INT 13h, AH=00h: reset disk drive
+~72 ~f8     ; jc .resetFloppy     ; try again if there was an error (CF is set)
+
+    ; --------------------------------------------------------------------------
+    ; Read the sectors from the floppy.
+
+~b5 ~00     ; mov ch, 0           ; CH = cylinder
+~b6 ~00     ; mov dh, 0           ; DH = head number
+~b2 ~00     ; mov dl, 0           ; DL = drive number
+; .read:
+~50         ; push ax
+~b4 ~02     ; mov ah, 0x2
+~cd ~13     ; int 0x13            ; INT 13h, AH=02h: read sectors from drive
+~58         ; pop ax
+~72 ~f8     ; jc .read            ; try again if there was an error (CF is set)
+
+~61         ; popa
+~c3         ; ret
+
+; Start the system calls at 0x01a0.
+; times 0x01a0 - ($ - $$) db 0
+
+                                      ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; System Calls
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; 0x1a0
+; ------------------------------------------------------------------------------
+; os_print_string(str)
+;   Prints a string to the console.
+;
+;   Input
+;     str - null terminated string to print
+;
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_string:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~60         ; pusha
+~8b ~76 ~04 ; mov si, [bp + 4]    ; SI = str
+~b4 ~0e     ; mov ah, 0x0e        ; INT 10h, AH=0Eh: write text in teletype mode
+~31 ~db     ; xor bx, bx          ; BH = 0 page number (text modes) and
+            ;                     ; BL = 0 foreground color (graphics modes only)
+; .nextChar:
+~ac         ; lodsb               ; loads the byte at DS:SI to AL and increment SI
+~08 ~c0     ; or al, al           ; see if we've read the null termination
+~74 ~04     ; jz .exit
+~cd ~10     ; int 0x10            ; print the character
+~eb ~f7     ; jmp .nextChar
+; .exit:
+~61         ; popa
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x01c0 - ($ - $$) db 0
+
+                                      ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x1c0
+; ------------------------------------------------------------------------------
+; os_print_line(str)
+;   Prints a string to the console, followed by a CR/LF combination.
+;
+;   Input
+;     str - null terminated string to print
+;
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_line:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~ff ~76 ~04 ; push word [bp + 4]
+~b8 ~03 ~00 ; mov ax, os_print_string
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~b8 ~09 ~00 ; mov ax, os_print_newline
+~ff ~d0     ; call ax
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x1e0 - ($ - $$) db 0
+                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x1e0
+; ------------------------------------------------------------------------------
+; os_print_newline()
+;   Prints a CR/LF combination.
+;
+;   Input
+;     Nothing
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_newline:
+~6a ~0d     ; push `\r`
+~b8 ~0c ~00 ; mov ax, os_print_char
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~6a ~0a     ; push `\n`
+~b8 ~0c ~00 ; mov ax, os_print_char
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~c3         ; ret
+
+; times 0x200 - ($ - $$) db 0
+                    ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x200
+; ------------------------------------------------------------------------------
+; os_print_char(char)
+;   Prints a character to the console.
+;
+;   Input
+;     char - character to print
+;
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_char:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~60         ; pusha
+~b4 ~0e     ; mov ah, 0x0e        ; INT 10h, AH=0Eh: write text in teletype mode
+~31 ~db     ; xor bx, bx          ; BH = 0 page number (text modes) and
+            ;                     ; BL = 0 foreground color (graphics modes only)
+~8a ~46 ~04 ; mov al, [bp + 4]
+~cd ~10     ; int 0x10            ; print the character
+~61         ; popa
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x220
+; ------------------------------------------------------------------------------
+; os_print_space()
+;   Prints a space character to the console.
+;
+;   Input
+;     Nothing
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_print_space:
+~6a ~20     ; push ' '
+~b8 ~0c ~00 ; mov ax, os_print_char
+~ff ~d0     ; call ax
+~83 ~c4 ~02 ; add sp, 2
+~c3         ; ret
+
+; times 0x230 - ($ - $$) db 0
+                                              ~00 ~00 ~00 ~00 ~00
+
+; 0x230
+; ------------------------------------------------------------------------------
+; os_print_hex_nibble(nibble, should_print_prefix)
+;   Prints the low nibble in hexidecimal format, with an optional prefix.
+;
+;   Input
+;     nibble              - the nibble to print
+;     should_print_prefix - non-zero if the '0x' prefix should be printed, 0 if no prefix
+; ------------------------------------------------------------------------------
+
+; os_print_hex_nibble:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~60         ; pusha
+
+~83 ~7e ~06 ~00 ; cmp word [bp + 6], 0; AX = should_print_prefix
+~75 ~02     ; jne .print_prefix
+~eb ~10     ; jmp .continue
+; .print_prefix:
+~6a ~30     ; push '0'
+~b8 ~0c ~00 ; mov ax, os_print_char
+~ff ~d0     ; call ax
+~58         ; pop ax
+~6a ~78     ; push 'x'
+~b8 ~0c ~00 ; mov ax, os_print_char
+~ff ~d0     ; call ax
+~58         ; pop ax
+; .continue:
+~8a ~46 ~04 ; mov al, [bp + 4]
+~24 ~0f     ; and al, 0x0F        ; mask out the high nibble and leave the low nibble
+~3c ~09     ; cmp al, 9
+~7e ~02     ; jle .print_digit
+~04 ~07     ; add al, 'A' - '9' - 1   ; skip the punctuation between '9' and 'A' in the ASCII table
+; .print_digit:
+~04 ~30     ; add al, '0'         ; map the number to the ASCII characters
+~50         ; push ax
+~b8 ~0c ~00 ; mov ax, os_print_char
+~ff ~d0     ; call ax
+~58         ; pop ax
+
+~61         ; popa
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x270 - ($ - $$) db 0
+                    ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x270
+; ------------------------------------------------------------------------------
+; os_print_hex_byte(byte, should_print_prefix)
+;   Prints the low byte in hexidecimal format, with an optional prefix.
+;
+;   Input
+;     byte                - the byte to print
+;     should_print_prefix - non-zero if the '0x' prefix should be printed, 0 if no prefix
+; ------------------------------------------------------------------------------
+
+; os_print_hex_byte:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~60         ; pusha
+
+    ; Print the high nibble, with the prefix if necessary.
+~ff ~76 ~06 ; push word [bp + 6]
+~8b ~46 ~04 ; mov ax, [bp + 4]
+~c1 ~e8 ~04 ; shr ax, 4
+~50         ; push ax
+~b8 ~12 ~00 ; mov ax, os_print_hex_nibble
+~ff ~d0     ; call ax
+~83 ~c4 ~04 ; add sp, 4
+
+    ; Print the low nibble, with no prefix.
+~6a ~00     ; push 0
+~ff ~76 ~04 ; push word [bp + 4]
+~b8 ~12 ~00 ; mov ax, os_print_hex_nibble
+~ff ~d0     ; call ax
+~83 ~c4 ~04 ; add sp, 4
+
+~61         ; popa
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x2a0 - ($ - $$) db 0
+                                  ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x2a0
+; ------------------------------------------------------------------------------
+; os_print_hex_word(word, should_print_prefix)
+;   Prints the word in hexidecimal format, with an optional prefix.
+;
+;   Input
+;     word                - the word to print
+;     should_print_prefix - non-zero if the '0x' prefix should be printed, 0 if no prefix
+; ------------------------------------------------------------------------------
+
+; os_print_hex_word:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~60         ; pusha
+
+    ; Print the high byte, with the prefix if necessary.
+~ff ~76 ~06 ; push word [bp + 6]
+~8b ~46 ~04 ; mov ax, [bp + 4]
+~c1 ~e8 ~08 ; shr ax, 8
+~50         ; push ax
+~b8 ~15 ~00 ; mov ax, os_print_hex_byte
+~ff ~d0     ; call ax
+~83 ~c4 ~04 ; add sp, 4
+
+    ; Print the low byte, with no prefix.
+~6a ~00     ; push 0
+~ff ~76 ~04 ; push word [bp + 4]
+~b8 ~15 ~00 ; mov ax, os_print_hex_byte
+~ff ~d0     ; call ax
+~83 ~c4 ~04 ; add sp, 4
+
+~61         ; popa
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x2d0 - ($ - $$) db 0
+                                  ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x2d0
+; ------------------------------------------------------------------------------
+; os_print_registers()
+;   Prints all of the general purpose register values. Useful for debugging.
+; ------------------------------------------------------------------------------
+
+; os_print_registers:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~60         ; pusha
+
+    ; Push the registers we want to print in reverse order.
+~55         ; push bp
+~68 ~c8 ~00 ; push str_sp
+~16         ; push ss
+~68 ~c2 ~00 ; push str_ss
+~0f ~a8     ; push gs
+~68 ~bc ~00 ; push str_gs
+~0f ~a0     ; push fs
+~68 ~b6 ~00 ; push str_fs
+~06         ; push es
+~68 ~b0 ~00 ; push str_es
+~1e         ; push ds
+~68 ~aa ~00 ; push str_ds
+~0e         ; push cs
+~68 ~a5 ~00 ; push str_cs
+
+~57         ; push di
+~68 ~9f ~00 ; push str_di
+~56         ; push si
+~68 ~99 ~00 ; push str_si
+~52         ; push dx
+~68 ~93 ~00 ; push str_dx
+~51         ; push cx
+~68 ~8d ~00 ; push str_cx
+~53         ; push bx
+~68 ~87 ~00 ; push str_bx
+~50         ; push ax
+~68 ~82 ~00 ; push str_ax
+
+~b9 ~0d ~00 ; mov cx, 13
+; .loop:
+~83 ~f9 ~07 ; cmp cx, 7           ; print a new line after DI
+~75 ~05     ; jne .continue
+~b8 ~09 ~00 ; mov ax, os_print_newline
+~ff ~d0     ; call ax
+; .continue:
+~58         ; pop ax              ; get the string to print
+~50         ; push ax
+~b8 ~03 ~00 ; mov ax, os_print_string
+~ff ~d0     ; call ax
+~58         ; pop ax              ; pop off the arg
+
+~58         ; pop ax              ; get the register value
+~6a ~01     ; push 1              ; should_print_prefix = true
+~50         ; push ax             ; word = register
+~b8 ~18 ~00 ; mov ax, os_print_hex_word
+~ff ~d0     ; call ax
+~83 ~c4 ~04 ; add sp, 4           ; pop off the args
+~e2 ~e0     ; loop .loop
+
+~b8 ~09 ~00 ; mov ax, os_print_newline
+~ff ~d0     ; call ax
+
+~61         ; popa
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x340 - ($ - $$) db 0
+                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x340
+; ------------------------------------------------------------------------------
+; os_print_memory(address, line_count)
+;   Prints the contents of memory at the specified address. Useful for debugging.
+;
+; Input
+;   address    - the address of the memory to print
+;   line_count - the number of lines of 8 bytes to print
+; ------------------------------------------------------------------------------
+
+; os_print_memory:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~60         ; pusha
+
+~83 ~7e ~06 ~00 ; cmp word [bp + 6], 0; if (line_loop <= 0) then .exit
+~7e ~3d     ; jle .exit
+; .line_loop:
+    ; Print the starting address
+~6a ~01     ; push 1              ; should_print_prefix = true
+~ff ~76 ~04 ; push word [bp + 4]  ; address
+~b8 ~18 ~00 ; mov ax, os_print_hex_word
+~ff ~d0     ; call ax
+~83 ~c4 ~04 ; add sp, 4           ; pop off the args
+
+~b8 ~0f ~00 ; mov ax, os_print_space
+~ff ~d0     ; call ax
+
+~b9 ~08 ~00 ; mov cx, 8
+; .byte_loop:
+~6a ~00     ; push 0              ; should_print_prefix = false
+~8b ~5e ~04 ; mov bx, [bp + 4]    ; BX = address
+~8a ~1f     ; mov bl, [bx]        ; BX = &address
+~53         ; push bx
+~b8 ~15 ~00 ; mov ax, os_print_hex_byte
+~ff ~d0     ; call ax
+~83 ~c4 ~04 ; add sp, 4           ; pop off the args
+
+~b8 ~0f ~00 ; mov ax, os_print_space
+~ff ~d0     ; call ax
+~ff ~46 ~04 ; inc word [bp + 4]   ; address++
+~e2 ~e6     ; loop .byte_loop
+
+~b8 ~09 ~00 ; mov ax, os_print_newline
+~ff ~d0     ; call ax
+
+~ff ~4e ~06 ; dec word [bp + 6]        ; line_count--
+~83 ~7e ~06 ~00 ; cmp word [bp + 6], 0
+~7f ~c3     ; jg .line_loop
+; .exit:
+~61         ; popa
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x390 - ($ - $$) db 0
+                                                  ~00 ~00 ~00 ~00

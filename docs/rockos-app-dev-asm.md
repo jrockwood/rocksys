@@ -97,6 +97,39 @@ Prints a character to the console.
 | **Returns**    | Nothing                     |
 
 
+### `os_print_hex_byte(byte, should_print_prefix)`
+Prints the low byte in hexidecimal format, with an optional prefix.
+
+|                |                            |
+|----------------|----------------------------|
+| **Address**    | 0x15                       |
+| **Parameters** | `byte` - byte to print     |
+|                | `should_print_prefix` - non-zero if the '0x' prefix should be printed  |
+| **Returns**    | Nothing                    |
+
+
+### `os_print_hex_nibble(nibble, should_print_prefix)`
+Prints the low nibble in hexidecimal format, with an optional prefix.
+
+|                |                            |
+|----------------|----------------------------|
+| **Address**    | 0x12                       |
+| **Parameters** | `nibble` - number to print |
+|                | `should_print_prefix` - non-zero if the '0x' prefix should be printed  |
+| **Returns**    | Nothing                    |
+
+
+### `os_print_hex_word(word, should_print_prefix)`
+Prints the word in hexidecimal format, with an optional prefix.
+
+|                |                            |
+|----------------|----------------------------|
+| **Address**    | 0x18                       |
+| **Parameters** | `word` - number to print   |
+|                | `should_print_prefix` - non-zero if the '0x' prefix should be printed  |
+| **Returns**    | Nothing                    |
+
+
 ### `os_print_line(str)`
 Prints a null-terminated string to the screen followed by a new line sequence
 (carriage return/line feed combination, CR/LF).
@@ -108,12 +141,43 @@ Prints a null-terminated string to the screen followed by a new line sequence
 | **Returns**    | Nothing                   |
 
 
+### `os_print_memory(*address, line_count)`
+Prints the contents of memory at the specified address. Useful for debugging.
+
+|                |                                                         |
+|----------------|---------------------------------------------------------|
+| **Address**    | 0x1E                                                    |
+| **Parameters** | `*address`    - the address of the memory to print      |
+|                | `line_count` - the number of lines of 8 bytes to print  |
+| **Returns**    | Nothing                                                 |
+
+
 ### `os_print_newline()`
 Prints a new line sequence (carriage return/line feed combination, CR/LF).
 
 |                |                         |
 |----------------|-------------------------|
 | **Address**    | 0x09                    |
+| **Parameters** | None                    |
+| **Returns**    | Nothing                 |
+
+
+### `os_print_registers()`
+Prints all of the general purpose register values. Useful for debugging.
+
+|                |                         |
+|----------------|-------------------------|
+| **Address**    | 0x1B                    |
+| **Parameters** | None                    |
+| **Returns**    | Nothing                 |
+
+
+### `os_print_space()`
+Prints a space character to the screen.
+
+|                |                         |
+|----------------|-------------------------|
+| **Address**    | 0x0F                    |
 | **Parameters** | None                    |
 | **Returns**    | Nothing                 |
 
