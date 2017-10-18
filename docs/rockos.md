@@ -37,36 +37,32 @@ drive is 512 bytes).
 | 97-1072         | `0x0C200-0x861FF` | Source File (500K, 976 sectors) |
 | 1073-1121       | `0x86200-0x8C3FF` | Assembled File (written) (24K)  |
 
-Steps
---------------------------------------------------------------------------------
 
-### Version 0.1 - Hello World
+Version 0.1 - Hello World
+--------------------------------------------------------------------------------
 
 This version will simply print out the copyright and version information to the
 screen, which lays the foundation for adding additional features. Even doing
 that much will validate that we're setting up the segment registers correctly
 and using the BIOS interrupts to print strings to the screen.
 
-**Building**
-
+### Building
 Running `build.cmd` will create a blank floppy disk image and then copy our 512
 byte bootloader file to the first segment on the floppy disk.
 
-**Setup**
-
+### Setup
 Create a virtual machine in Hyper-V that boots from the floppy drive. All of the
 disk images reside in the `disks` directory. The virtual machine only needs the
 minimum requirements in terms of processor and memory.
 
-**Running**
-
+### Running
 Start the virtual machine that you created, which boots from the floppy and you
 should see the banner and copyright information printed to the screen. Not much
 to see, but a lot is happening behind the scenes.
 
 
-
-### Version 0.2 - Basic Kernel
+Version 0.2 - Basic Kernel
+--------------------------------------------------------------------------------
 
 This version loads the `kernel.bin` file from the floppy disk into memory
 location `0x2000:0000` and then starts executing it. The `kernel.bin` file will
@@ -76,19 +72,17 @@ The kernel will simply print "Hello, World" and then halt. Again, it doesn't do
 much but it puts us into a good position since we'll have to set up the segment
 registers and the stack.
 
-**Building**
-
+### Building
 All of the versions will have a `build.cmd` file that can be run. It will set up
 the floppy disk with the bootloader and the kernel.
 
-**Running**
-
+### Running
 Same as last time, from this point on, if you don't see a Building and Running
 section, assume it's the same process.
 
 
-
-### Version 0.3 - Launching the assembler
+Version 0.3 - Launching the assembler
+--------------------------------------------------------------------------------
 
 We now have a working bootloader and the start of a kernel. It's still a pain to
 manually hand-assemble the code, especially in figuring out jump and call
@@ -104,7 +98,7 @@ don't want to get into a full-blown general-purpose disk reading routine yet
 have to translate cylinders-head-sectors (CHS) into a logical block address
 (LBA). Sector 5 is still within the first cylinder.
 
-**OS Services**
+### OS Services
 
 We will load the assembler code from sector 50 on the disk into memory location
 `0x2000:8000`, which is the starting address for external programs in our memory
@@ -125,7 +119,7 @@ without requiring the external programs to change.
 See the `rockos-app-dev-asm.md` file for a description of all of the system
 calls that are exposed by the kernel.
 
-**Bootloader**
+### Bootloader
 
 The bootloader doesn't need to change much for this version. Since we're adding
 OS system calls to the kernel, it's grown past a single sector on the disk, so
@@ -136,15 +130,15 @@ to limitations of the `INT 13h, AH=02h` BIOS call. For now, let's just load 3
 sectors, which should tide us over until we get the kernel loading and the basic
 assembler going.
 
-**Building**
+### Building
 
 Since we're now starting to build the assembler, the `build.cmd` file will move
 to the `src/rockasm` directories. The assembler will use a specific version of
 the OS depending on which system services it needs.
 
 
-
-### Version 0.4 - Rudimentary Debugging
+Version 0.4 - Rudimentary Debugging
+--------------------------------------------------------------------------------
 
 I originally started working on what is now version 0.5, which adds a
 non-trivial amount of new code and quickly got frustrated at the lack of basic
@@ -155,8 +149,8 @@ We need some helper functions to convert numbers to hex strings, which we'll add
 first. Then the debugging functions.
 
 
-
-### Version 0.5 - Basic Disk I/O
+Version 0.5 - Basic Disk I/O
+--------------------------------------------------------------------------------
 
 For the next version of the assembler, we need to introduce two new functions to
 read from and write to disk, `os_read_sectors` and `os_write_sectors`. To make
