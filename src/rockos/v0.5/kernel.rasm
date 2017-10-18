@@ -118,10 +118,13 @@
     ; Load the rockasm code from the 5th sector (1-based) to address
     ; 0x2000:8000 and then start executing it.
 
-~bb ~00 ~80 ; mov bx, 0x8000      ; copy to address 0x2000:8000 (ES:BX)
-~b0 ~01     ; mov al, 1           ; AL = number of sectors to read
-~b1 ~05     ; mov cl, 5           ; CL = sector number to read (1-based)
-~e8 ~32 ~00 ; call read_sectors
+~68 ~00 ~80 ; push 0x8000         ; dest_address = 0x2000:8000
+~6a ~01     ; push word 1         ; sector_count
+~6a ~04     ; push word 4         ; sector_number
+~b8 ~21 ~00 ; mov ax, os_read_sectors
+~ff ~d0     ; call ax
+~83 ~c4 ~06 ; add sp, 6
+~bb ~00 ~80 ; mov bx, 0x8000
 ~ff ~d3     ; call bx
 
     ; --------------------------------------------------------------------------
@@ -138,7 +141,7 @@
 
 ; times 0x160 - ($ - $$) db 0
 
-                                              ~00 ~00 ~00 ~00 ~00
+                                          ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ; 0x160
