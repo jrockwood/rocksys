@@ -109,6 +109,8 @@
 ~b8 ~06 ~00 ; mov ax, os_print_line
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
+~b8 ~09 ~00 ; mov ax, os_print_newline
+~ff ~d0     ; call ax
 
     ; --------------------------------------------------------------------------
     ; Load the rockasm code from the 5th sector (1-based) to address
@@ -117,20 +119,7 @@
 ~bb ~00 ~80 ; mov bx, 0x8000      ; copy to address 0x2000:8000 (ES:BX)
 ~b0 ~01     ; mov al, 1           ; AL = number of sectors to read
 ~b1 ~05     ; mov cl, 5           ; CL = sector number to read (1-based)
-~e8 ~37 ~00 ; call read_sectors
-
-
-~b8 ~1b ~00 ; mov ax, os_print_registers
-~ff ~d0     ; call ax
-~b8 ~09 ~00 ; mov ax, os_print_newline
-~ff ~d0     ; call ax
-~6a ~04     ; push 4              ; line_count
-~68 ~00 ~80 ; push 0x8000         ; address
-~b8 ~1e ~00 ; mov ax, os_print_memory
-~ff ~d0     ; call ax
-~83 ~c4 ~04 ; add sp, 4
-
-~bb ~00 ~80 ; mov bx, 0x8000      ; copy to address 0x2000:8000 (ES:BX)
+~e8 ~32 ~00 ; call read_sectors
 ~ff ~d3     ; call bx
 
     ; --------------------------------------------------------------------------
@@ -147,7 +136,7 @@
 
 ; times 0x160 - ($ - $$) db 0
 
-                                                      ~00 ~00 ~00
+                                              ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ; 0x160
