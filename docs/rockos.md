@@ -155,6 +155,18 @@ We need some helper functions to convert numbers to hex strings, which we'll add
 first. Then the debugging functions.
 
 
+
+### Version 0.5 - Basic Disk I/O
+
+For the next version of the assembler, we need to introduce two new functions to
+read from and write to disk, `os_read_sectors` and `os_write_sectors`. To make
+it easier on the callers, we'll abstract away the low-level cylinder, head,
+sector (CHS) addressing and allow callers to pass in logical sectors, which are
+called logical block addresses (LBA). That means we have to implement a function
+to translate between LBA and CHS.
+
+
+
 References
 --------------------------------------------------------------------------------
 

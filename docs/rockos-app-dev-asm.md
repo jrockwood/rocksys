@@ -20,6 +20,7 @@ The OS will execute your program by using a `call` instruction to a near
 absolute memory location (`0x2000:8000`), so in order quit your application and
 return back to the OS, you use the `ret` instruction.
 
+
 System Calls
 --------------------------------------------------------------------------------
 RockOS exposes the following functions for your programs to use. They are in the
@@ -28,8 +29,7 @@ absolute address and not have to worry about the segment. Internally, it's
 implemented as a table of `jmp` instructions to the start of each function.
 That allows the kernel to change without requiring external programs to change.
 
-**Calling Convention**
-
+### Calling Convention
 The system calls use the 16-bit `cdecl` calling convention, which has the
 following behavior:
 
@@ -83,11 +83,60 @@ caller:
 
 
 
-
-Screen
+API Reference
 --------------------------------------------------------------------------------
 
-### `os_print_char(char)`
+### Index
+- **[Disk](#disk)**
+  - `os_read_sectors`
+  - `os_write_sectors`
+- **[Screen](#screen)**
+  - `os_print_char`
+  - `os_print_hex_byte`
+  - `os_print_hex_nibble`
+  - `os_print_hex_word`
+  - `os_print_line`
+  - `os_print_memory`
+  - `os_print_newline`
+  - `os_print_registers`
+  - `os_print_space`
+  - `os_print_string`
+
+
+--------------------------------------------------------------------------------
+### Disk
+
+#### `os_read_sectors(sector_number, sector_count, *dest_address)`
+Reads the number of sectors from the floppy disk to the target address.
+
+|                |                                                           |
+|----------------|-----------------------------------------------------------|
+| **Address**    | 0x21                                                      |
+| **Parameters** | `sector_number` - logical sector number to read (0-based) |
+|                | `sector_count`  - number of sectors to read               |
+|                | `*dest_address`  - destination address                    |
+| **Returns**    | `AH` - error code                                         |
+|                | `AL` - 1 if successful, 0 if error                        |
+
+
+#### `os_write_sectors(sector_number, sector_count, *source_address)`
+Reads the number of sectors from the floppy disk to the target address.
+
+|                |                                                            |
+|----------------|------------------------------------------------------------|
+| **Address**    | 0x24                                                       |
+| **Parameters** | `sector_number`  - logical sector number to write (0-based)|
+|                | `sector_count`   - number of sectors to write              |
+|                | `*source_address` - source address                         |
+| **Returns**    | `AH` - error code                                          |
+|                | `AL` - 1 if successful, 0 if error                         |
+
+
+
+--------------------------------------------------------------------------------
+### Screen
+
+#### `os_print_char(char)`
 Prints a character to the console.
 
 |                |                             |
@@ -97,7 +146,7 @@ Prints a character to the console.
 | **Returns**    | Nothing                     |
 
 
-### `os_print_hex_byte(byte, should_print_prefix)`
+#### `os_print_hex_byte(byte, should_print_prefix)`
 Prints the low byte in hexidecimal format, with an optional prefix.
 
 |                |                            |
@@ -108,7 +157,7 @@ Prints the low byte in hexidecimal format, with an optional prefix.
 | **Returns**    | Nothing                    |
 
 
-### `os_print_hex_nibble(nibble, should_print_prefix)`
+#### `os_print_hex_nibble(nibble, should_print_prefix)`
 Prints the low nibble in hexidecimal format, with an optional prefix.
 
 |                |                            |
@@ -119,7 +168,7 @@ Prints the low nibble in hexidecimal format, with an optional prefix.
 | **Returns**    | Nothing                    |
 
 
-### `os_print_hex_word(word, should_print_prefix)`
+#### `os_print_hex_word(word, should_print_prefix)`
 Prints the word in hexidecimal format, with an optional prefix.
 
 |                |                            |
@@ -130,7 +179,7 @@ Prints the word in hexidecimal format, with an optional prefix.
 | **Returns**    | Nothing                    |
 
 
-### `os_print_line(str)`
+#### `os_print_line(str)`
 Prints a null-terminated string to the screen followed by a new line sequence
 (carriage return/line feed combination, CR/LF).
 
@@ -141,7 +190,7 @@ Prints a null-terminated string to the screen followed by a new line sequence
 | **Returns**    | Nothing                   |
 
 
-### `os_print_memory(*address, line_count)`
+#### `os_print_memory(*address, line_count)`
 Prints the contents of memory at the specified address. Useful for debugging.
 
 |                |                                                         |
@@ -152,7 +201,7 @@ Prints the contents of memory at the specified address. Useful for debugging.
 | **Returns**    | Nothing                                                 |
 
 
-### `os_print_newline()`
+#### `os_print_newline()`
 Prints a new line sequence (carriage return/line feed combination, CR/LF).
 
 |                |                         |
@@ -162,7 +211,7 @@ Prints a new line sequence (carriage return/line feed combination, CR/LF).
 | **Returns**    | Nothing                 |
 
 
-### `os_print_registers()`
+#### `os_print_registers()`
 Prints all of the general purpose register values. Useful for debugging.
 
 |                |                         |
@@ -172,7 +221,7 @@ Prints all of the general purpose register values. Useful for debugging.
 | **Returns**    | Nothing                 |
 
 
-### `os_print_space()`
+#### `os_print_space()`
 Prints a space character to the screen.
 
 |                |                         |
@@ -182,7 +231,7 @@ Prints a space character to the screen.
 | **Returns**    | Nothing                 |
 
 
-### `os_print_string(str)`
+#### `os_print_string(str)`
 Prints a null-terminated string to the screen.
 
 |                |                           |
@@ -190,3 +239,7 @@ Prints a null-terminated string to the screen.
 | **Address**    | 0x03                      |
 | **Parameters** | `str` - address of string |
 | **Returns**    | Nothing                   |
+
+
+
+--------------------------------------------------------------------------------
