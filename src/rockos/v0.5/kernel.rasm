@@ -139,54 +139,14 @@
 ~fa         ; cli
 ~f4         ; hlt
 
-; times 0x160 - ($ - $$) db 0
+; Start the system calls at 0x01a0.
+; times 0x01a0 - ($ - $$) db 0
 
                                           ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x160
-; ------------------------------------------------------------------------------
-; read_sectors
-;   Reads the number of sectors from the floppy disk to the target address.
-;
-;   Input
-;     AL - number of sectors to read
-;     CL - sector number to read (1-based)
-;     ES:BX - destination address
-; ------------------------------------------------------------------------------
-
-; read_sectors:
-~60         ; pusha
-
-    ; --------------------------------------------------------------------------
-    ; Reset the floppy disk so the head is at sector 0.
-
-; .resetFloppy:
-~b2 ~00     ; mov dl, 0           ; drive 0 = "A:", the first floppy drive
-~b4 ~00     ; mov ah, 0
-~cd ~13     ; int 0x13            ; INT 13h, AH=00h: reset disk drive
-~72 ~f8     ; jc .resetFloppy     ; try again if there was an error (CF is set)
-
-    ; --------------------------------------------------------------------------
-    ; Read the sectors from the floppy.
-
-~b5 ~00     ; mov ch, 0           ; CH = cylinder
-~b6 ~00     ; mov dh, 0           ; DH = head number
-~b2 ~00     ; mov dl, 0           ; DL = drive number
-; .read:
-~50         ; push ax
-~b4 ~02     ; mov ah, 0x2
-~cd ~13     ; int 0x13            ; INT 13h, AH=02h: read sectors from drive
-~58         ; pop ax
-~72 ~f8     ; jc .read            ; try again if there was an error (CF is set)
-
-~61         ; popa
-~c3         ; ret
-
-; Start the system calls at 0x01a0.
-; times 0x01a0 - ($ - $$) db 0
-
-                                      ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
