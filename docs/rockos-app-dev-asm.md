@@ -118,6 +118,16 @@ Prints a new line sequence (carriage return/line feed combination, CR/LF).
 | **Returns**    | Nothing                 |
 
 
+### `os_print_space()`
+Prints a space character to the screen.
+
+|                |                         |
+|----------------|-------------------------|
+| **Address**    | 0x0F                    |
+| **Parameters** | None                    |
+| **Returns**    | Nothing                 |
+
+
 ### `os_print_string(str)`
 Prints a null-terminated string to the screen.
 
