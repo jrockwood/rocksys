@@ -159,6 +159,18 @@ and `os_string_to_int`. The OS already has `os_print_hex_nibble`,
 to implement `os_int_to_string`. The assembler will need `os_string_to_int` to
 compile hex pairs.
 
+We're also introducing the concept of kernel unit tests. As we add more and more
+functionality to the kernel, it becomes important that we don't regress any
+existing behavior, which is really, really hard to debug and diagnose (believe
+me, I've spent hours trying to figure out why a function that previously worked
+no longer does because I added or removed an instruction, which then throws off
+the jump addresses.)
+
+### Building
+There is another `build.cmd` file in the rockos directory which will build a
+disk to run the unit tests. This is separate from the `build.cmd` that is in the
+rockasm directories, which builds the assembler.
+
 
 ## References
 
