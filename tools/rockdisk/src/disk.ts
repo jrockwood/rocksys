@@ -35,8 +35,8 @@ export function copyBlock(
   destinationOffset?: number
 ): number {
   // open the source and destination files
-  const sourceFile: number = fsExtra.openSync(sourceFilePath, 'r');
-  const destFile: number = fsExtra.openSync(destinationDiskPath, 'r+');
+  const sourceFile: number = openForRead(sourceFilePath);
+  const destFile: number = openForWrite(destinationDiskPath);
 
   try {
     // copy blocks of 4K until we're done
@@ -72,4 +72,23 @@ export function copyBlock(
     fsExtra.closeSync(sourceFile);
     fsExtra.closeSync(destFile);
   }
+}
+
+function openForRead(file: string): number {
+  try {
+    const fileDescriptor: number = fsExtra.openSync(file, 'r');
+    return fileDescriptor;
+  } catch (e) {
+    const error: NodeJS.ErrnoException = e;
+    if (error.code === 'ENOENT') {
+      throw new Error(`Source file '${file}' not found.`);
+    }
+
+    throw e;
+  }
+}
+
+function openForWrite(file: string): number {
+  fsExtra.ensureFileSync(file);
+  return fsExtra.openSync(file, 'r+');
 }
