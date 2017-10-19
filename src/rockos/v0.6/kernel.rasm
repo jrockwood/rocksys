@@ -115,7 +115,7 @@
 ~ff ~d0     ; call ax
 
     ; --------------------------------------------------------------------------
-    ; Load the rockasm code from the 50th sector to address 0x2000:8000 and then
+    ; Load the program code from the 50th sector to address 0x2000:8000 and then
     ; start executing it. Load 24K worth of program binary code.
 
 ~68 ~00 ~80 ; push 0x8000         ; dest_address = 0x2000:8000
