@@ -3,11 +3,10 @@
 ; --------------------------------
 ; Copyright (c) 2017 Justin Rockwood. All rights reserved.
 ;
-; We're starting a pattern of leaving gaps between functions in case we need to
-; extend them in the future. This ensures that we don't have to change memory
-; addresses if we change the code. The 'times' command will do that for us, but
-; we don't have an assembler yet, so we have to do it manually by filling in
-; zeros.
+; There is a pattern of leaving gaps between functions in case we need to extend
+; them in the future. This ensures that we don't have to change memory addresses
+; if we change the code. The 'times' command will do that for us, but we don't
+; have an assembler yet, so we have to do it manually by filling in zeros.
 ;
 
 ; [BITS 16]               ; Tells the assembler to generate 16 bit code
