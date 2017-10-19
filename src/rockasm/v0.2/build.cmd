@@ -15,5 +15,8 @@ node tools\rockdisk\bin\rockdisk copy --src src\rockos\v0.5\kernel.bin --dest di
 echo Copying the assembler to the floppy disk image...
 node tools\rockdisk\bin\rockdisk copy --src "%~dp0rockasm.bin" --dest disks\rockos.vfd --doff 6200h
 
+echo Copying the source file to the floppy disk image...
+node tools\rockdisk\bin\rockdisk copy --src "%~dp0rockasm.rasm" --dest disks\rockos.vfd --doff C200h
+
 popd
 echo Done
