@@ -151,6 +151,15 @@ sector (CHS) addressing and allow callers to pass in logical sectors, which are
 called logical block addresses (LBA). That means we have to implement a function
 to translate between LBA and CHS.
 
+## Version 0.6 - String Conversions
+
+The OS needs to expose two more functions for the assembler: `os_int_to_string`
+and `os_string_to_int`. The OS already has `os_print_hex_nibble`,
+`os_print_hex_byte`, and `os_print_hex_word` which does some of the work needed
+to implement `os_int_to_string`. The assembler will need `os_string_to_int` to
+compile hex pairs.
+
+
 ## References
 
 - [OSDev wiki](http://wiki.osdev.org) - Great resource for lots of various
