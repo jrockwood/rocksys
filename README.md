@@ -41,7 +41,7 @@ write a C++ compiler, we'll need a C compiler, which needs an assembler.
 
 `assembler --> C --> C++ --> C#`
 
-### Where do we start?
+## Where to start
 
 Remember that the only thing we have available to us is the bare hardware, so
 the first thing we'll need is a rudimentary operating system, just enough to run
@@ -65,6 +65,16 @@ details on how we do that.
 
 Before we can run an assembler, though, we need a basic boot loader. See the
 [Rockwood OS](docs/rockos.md) file for more information.
+
+## How to follow along
+
+The documentation and code is written in a way that you can follow along with
+the basic steps. I use git tags to tag the various versions of the OS and
+assembler, so you can see how things are built up. Additionally, there are
+versioned directories under [src/rockasm](src/rockasm) and
+[src/rockos](src/rockos). Each version uses the previous version to build
+itself, and thus progress little by little from basically nothing to a
+full-blown OS and assembler.
 
 ## License
 
