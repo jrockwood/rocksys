@@ -67,3 +67,7 @@ details on how we do that.
 
 Before we can run an assembler, though, we need a basic boot loader. See the
 [Rockwood OS](docs/rockos.md) file for more information.
+
+## License
+
+[Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0)
