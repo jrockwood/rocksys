@@ -1,18 +1,17 @@
-RockAsm - Rockwood Assembler
-================================================================================
+# RockAsm - Rockwood Assembler
 
-Version 1
---------------------------------------------------------------------------------
+## Version 1
 
 The first version of the assembler will only support 16-bit instructions and a
 subset of the full Intel instructions set. The idea is to build enough of an
 assembler that we can use for writing a minimal C language compiler.
 
 I will be using the NASM syntax ([Netwide assembler](http://www.nasm.us/))
-rather than MASM (Microsoft's assembler) simply because I find it more intuitive.
+rather than MASM (Microsoft's assembler) simply because I find it more
+intuitive.
 
-*(Ideas and some code borrowed from Edmund Grimley Evans'
-[bootstrapping assembler](http://www.rano.org/bcompiler.html).)*
+_(Ideas and some code borrowed from Edmund Grimley Evans'
+[bootstrapping assembler](http://www.rano.org/bcompiler.html).)_
 
 ### Steps
 
@@ -26,7 +25,7 @@ This version simply prints the banner and copyright information to the screen
 using OS-supplied functions to print. After it's done, it will return to the
 kernel.
 
-**OS Requirements**
+#### OS Requirements
 
 The RockOS kernel will load us into memory, having already set the necessary
 segment registers and set up the stack. It will use the `call` instruction to a
@@ -35,9 +34,9 @@ kernel the assembler will use the `ret` instruction.
 
 Additionally, RockOS will expose some functions for us to use in the same
 segment as the assembler so we can simply use a `call` instruction with an
-absolute address and not have to worry about the segment. See the [RockOS
-Application Development Handbook](rock-os-app-dev-asm.md) for details on the
-OS-provided system calls.
+absolute address and not have to worry about the segment. See the
+[RockOS Application Development Handbook](rock-os-app-dev-asm.md) for details on
+the OS-provided system calls.
 
 ### Version 0.2
 
@@ -72,9 +71,9 @@ floppy into a new file that we can use to compare against our hand-assembled
 version. There is a `postbuild.bat` file used to pull off 16KB starting from
 address 0x11000.
 
-**Lexical Grammar**
+#### Lexical Grammar
 
-```
+```text
 input:
   token
   comment
@@ -90,9 +89,9 @@ whitespace:
   ' ', '\t', '\r', '\n'
 ```
 
-**Grammar**
+#### Grammar
 
-```
+```text
 compilationUnit:
   hexPairsOpt
 
@@ -116,29 +115,28 @@ forget to update references. So we'll need to support some kind of labels. This
 has several implications:
 
 1. We need a data structure to store the label's name and the address of the
-label. We'll use a sorted array using binary search since that's simpler to
-implement than a hash table. The kernel still doesn't have any heap or memory
-management, so we will need to manage our own memory.
+   label. We'll use a sorted array using binary search since that's simpler to
+   implement than a hash table. The kernel still doesn't have any heap or memory
+   management, so we will need to manage our own memory.
 
 2. The assembler will need two passes instead of one. This is because labels can
-be used before they're declared. We should also probably implement a lexing
-phase and a compile phase. That will allow us to store larger programs all in
-memory instead of paging them in from disk. But that can come later.
+   be used before they're declared. We should also probably implement a lexing
+   phase and a compile phase. That will allow us to store larger programs all in
+   memory instead of paging them in from disk. But that can come later.
 
 3. We have the concept of locally-scoped labels that start with a '.' period
-character.
+   character.
 
 #### Phases
 
 **Phase A** Build the ability to correctly lex identifiers and parse labels.
 
-**Phase B** Implement a 2-pass compiler and count the bytes. Pass 1 will lex
-and parse and count the bytes and pass 2 will do the actual compiling and write
-out to disk.
+**Phase B** Implement a 2-pass compiler and count the bytes. Pass 1 will lex and
+parse and count the bytes and pass 2 will do the actual compiling and write out
+to disk.
 
-**Phase C** Write a sorted array with binary search to store the label/
-address pairs. Since this is a general-purpose algorithm, we'll add it to the
-kernel.
+**Phase C** Write a sorted array with binary search to store the label/ address
+pairs. Since this is a general-purpose algorithm, we'll add it to the kernel.
 
 **Phase D** Pre-allocate a chunk of memory that will be used for storing the
 label strings and create a sorted array of pointers into the string table.
@@ -148,12 +146,12 @@ it to the string table and the lookup. This means that locally-scoped labels
 starting with a '.' have to be unique for now. Also add a functon that prints
 the string lookup table to verify that it's working.
 
-**Phase E** During pass 0 create the lookup table of labels with their
-address (which is just the byte count at the point when the label is declared).
-It will also detect duplicate labels and report an error. In addition, support
-local (private) labels, which start with a '.'. Each label declaration will
-store a sorted array of a maximum of 10 child label declarations, which should
-be sufficient for now.
+**Phase E** During pass 0 create the lookup table of labels with their address
+(which is just the byte count at the point when the label is declared). It will
+also detect duplicate labels and report an error. In addition, support local
+(private) labels, which start with a '.'. Each label declaration will store a
+sorted array of a maximum of 10 child label declarations, which should be
+sufficient for now.
 
 To get each phase working we have to keep bootstrapping the assembler with new
 functionality. Here's the general process:
@@ -161,14 +159,14 @@ functionality. Here's the general process:
 1. Program the new functionality for phase X in `rockasm-x.rasm`.
 2. Use the assembler from phase X-1 to assemble phase X.
 3. Start phase X+1 by creating `rockasm-x+1.rasm` using the new functionality,
-but not adding any new functionality (for example uncommenting labels if we just
-added label support).
+   but not adding any new functionality (for example uncommenting labels if we
+   just added label support).
 4. Make sure `rockasm-x+1.rasm` gets assembled correctly using phase X.
 5. Repeat.
 
-**Lexical Grammar**
+#### Lexical Grammar
 
-```
+```text
 input:
   token
   comment
@@ -206,9 +204,9 @@ whitespace:
   ' ', '\t', '\r', '\n'
 ```
 
-**Grammar**
+#### Grammar
 
-```
+```text
 compilation-unit:
   statement*
 
@@ -224,6 +222,7 @@ hex-pair:
 ```
 
 ### Version 0.6
+
 The assembler now has the infrastructure to support labels, but it doesn't use
 them yet. Time to beef up the lexing and parsing to support more constructs than
 just a label declaration and a hex pair.
@@ -237,13 +236,13 @@ compiling.
 
 #### Phases
 
-**Phase A** We're going to need a lot of space for more strings, but we're
-all out, so add another 512 bytes of space. This changes all of the addresses
-for almost everything, so doing just this change will help determine if we got
-it right and makes further changes easy to see in a diff.
+**Phase A** We're going to need a lot of space for more strings, but we're all
+out, so add another 512 bytes of space. This changes all of the addresses for
+almost everything, so doing just this change will help determine if we got it
+right and makes further changes easy to see in a diff.
 
-**Phase B** Add the concept of reading and peeking characters, which will
-help when adding a separate lexing and parsing phase.
+**Phase B** Add the concept of reading and peeking characters, which will help
+when adding a separate lexing and parsing phase.
 
 **Phase C** Implement a lexing and parsing phase. The lexing phase will strip
 out comments and whitespace and produce a series of tokens. The parsing phase
@@ -256,9 +255,9 @@ from disk. It uses `peek_token` and `read_token` only.
 `call rel16`, `jmp rel8` and all of the conditional jump instructions (`jl`,
 `jle`, `jg`, `jge`, `je`, `jne`, etc.).
 
-**Lexical Grammar**
+#### Lexical Grammar
 
-```
+```text
 input:
   token
   comment
@@ -312,9 +311,9 @@ newline-or-eof:
   '\n' end of file
 ```
 
-**Grammar**
+#### Grammar
 
-```
+```text
 compilation-unit:
   source-line*
 
@@ -348,6 +347,7 @@ conditional-jump-operation: (one of)
 ```
 
 ### Version 0.7 - Simple Instructions and push/pop
+
 There are a few really simple instructions that are easy to parse and assemble
 and will cut down on the amount of manual assembling required.
 
@@ -357,15 +357,15 @@ and will cut down on the amount of manual assembling required.
 instructions that take no arguments and generate a single byte opcode: `ret`,
 `lodsb`, and `stosb`.
 
-**Phase B** Let's tackle single arguments next, starting with `push` and
-`pop`, and only the forms `r16` for now. That means the assembler will have to
+**Phase B** Let's tackle single arguments next, starting with `push` and `pop`,
+and only the forms `r16` for now. That means the assembler will have to
 correctly parse the general purpose register names `ax`, `bx`, `cx`, `dx`, `sp`,
 `bp`, `si`, and `di`. We might as well support the special-case push and pop of
 segment registers also: `cs`, `ds`, `es`, `fs`, `gs`, and `ss`.
 
-**Lexical Grammar**
+#### Lexical Grammar
 
-```
+```text
 input:
   token
   comment
@@ -430,9 +430,9 @@ newline-or-eof:
   '\n' end of file
 ```
 
-**Grammar**
+#### Grammar
 
-```
+```text
 compilation-unit:
   source-line*
 
@@ -483,16 +483,17 @@ conditional-jump-operation: (one of)
 ```
 
 ### Version 0.8 - Expressions
+
 Instructions like `push my_label + 2` or `times 0x1000 - ($ - $$)` contain
 expressions that we need to start parsing.
 
 #### Phases
 
-**Phase A - Memory Adjustments** The assembler source file size is nearing the limit of 132KB,
-which means trouble when the compiled program gets written back to disk since
-only 132KB was allocated between the source file and the compiled output. We'll
-bump it up to 500KB (0x7A000), which should give us plenty of growing room. The
-postbuild.bat file will need to be updated also.
+**Phase A - Memory Adjustments** The assembler source file size is nearing the
+limit of 132KB, which means trouble when the compiled program gets written back
+to disk since only 132KB was allocated between the source file and the compiled
+output. We'll bump it up to 500KB (0x7A000), which should give us plenty of
+growing room. The postbuild.bat file will need to be updated also.
 
 One other problem... the compiled program is almost at 8KB, which is the amount
 of space allocated between the start of the assembler in memory and the disk
@@ -503,15 +504,15 @@ when reading from disk.
 Here's what the memory map looks like for the running assembler before the
 changes made in this phase:
 
-_The address is a half-open range, not including the ending number_
+**Note:** _The address is a half-open range, not including the ending number_
 
-| Address     | Size  | Description                                         |
-|-------------|-------|-----------------------------------------------------|
-| 0x8000-A000 | 8 KB  | The kernel loads the assembler into this address    |
-| 0xA000-A200 | 512 B | Disk read buffer to hold one sector's worth of data |
-| 0xA200-A400 | 512 B | Disk write buffer to hold one sector's worth of data before flushing out to disk |
-| 0xA400-BC00 | 6 KB  | Buffer to hold all of the strings (labels). 6K of strings at 32 bytes max per string = 192 strings (minimum). |
-| 0xBC00-BE00 | 512 B | Sorted array for the string lookup                  |
+| Address     | Size  | Description                                                                                                                                |
+| ----------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0x8000-A000 | 8 KB  | The kernel loads the assembler into this address                                                                                           |
+| 0xA000-A200 | 512 B | Disk read buffer to hold one sector's worth of data                                                                                        |
+| 0xA200-A400 | 512 B | Disk write buffer to hold one sector's worth of data before flushing out to disk                                                           |
+| 0xA400-BC00 | 6 KB  | Buffer to hold all of the strings (labels). 6K of strings at 32 bytes max per string = 192 strings (minimum).                              |
+| 0xBC00-BE00 | 512 B | Sorted array for the string lookup                                                                                                         |
 | 0xBE00-C600 | 2 KB  | Sorted array of the label declarations. 255 max labels at 6 bytes per label = 1530 bytes. Round up to 2K, so the ending address is 0xC600. |
 
 Since the assembler is allowed to use up to address 0xF000, that gives us a
@@ -524,21 +525,21 @@ that amount for now.
 Another way to get 1KB back is to use the kernel's os_malloc function to give us
 space from the kernel's memory pool. Here's the new allocation.
 
-* 14 KB - Assembler code
-* 1 KB - Disk buffers
-* 10 KB - String buffer to be able to hold at least 320 unique strings
-* 1 KB - String lookup array
-* 2 KB - Label declaration array to store 255 labels
-* **Total: 28 KB**
+- 14 KB - Assembler code
+- 1 KB - Disk buffers
+- 10 KB - String buffer to be able to hold at least 320 unique strings
+- 1 KB - String lookup array
+- 2 KB - Label declaration array to store 255 labels
+- **Total: 28 KB**
 
-| Address     | Size  | Description                                         |
-|-------------|-------|-----------------------------------------------------|
-| 0x8000-B800 | 14 KB | The kernel loads the assembler into this address    |
-| 0xB800-BA00 | 512 B | Disk read buffer                                    |
-| 0xBA00-BC00 | 512 B | Disk write buffer                                   |
-| 0xBC00-E400 | 10 KB | Buffer to hold all of the strings (labels)          |
-| 0xE400-E800 | 1  KB | Sorted array for the string lookup                  |
-| 0xE800-F000 | 2  KB | Sorted array of the label declarations              |
+| Address     | Size  | Description                                      |
+| ----------- | ----- | ------------------------------------------------ |
+| 0x8000-B800 | 14 KB | The kernel loads the assembler into this address |
+| 0xB800-BA00 | 512 B | Disk read buffer                                 |
+| 0xBA00-BC00 | 512 B | Disk write buffer                                |
+| 0xBC00-E400 | 10 KB | Buffer to hold all of the strings (labels)       |
+| 0xE400-E800 | 1 KB  | Sorted array for the string lookup               |
+| 0xE800-F000 | 2 KB  | Sorted array of the label declarations           |
 
 **Phase B - Plain Numbers** We need a way to test the expressions, so let's
 implement `push imm8` and `push imm16`. We already implemented `push r16` and
@@ -547,7 +548,7 @@ hard to add expression parsing to the 'push' instruction. First add numeric
 constants, but only a subset of what NASM supports. Decimal and hexidecimal
 numbers with a leading '0x', '0X', '0h', or '0H' prefix for hexidecimal numbers
 are supported, but octal or binary numbers are not supported. Additionally,
-trailing suffixes are not supported. You can use the '_' character interspersed
+trailing suffixes are not supported. You can use the '\_' character interspersed
 in the number to break up long strings.
 
 **Phase C - Identifier Expressions** An identifier expression is simply
@@ -573,14 +574,13 @@ strings, 124 labels, and 5644 lines of code. We're going to run out of string
 space with the next iteration unless we do something. We have a couple of
 options:
 
-1. Remove a bunch of descriptive labels and use labels like `.jump1`,
-`.jump2`, etc. This will probably cut down the unique labels to something like
-100-150, which helps but only buys us so much time and reduces the readability
-of the code.
+1. Remove a bunch of descriptive labels and use labels like `.jump1`, `.jump2`,
+   etc. This will probably cut down the unique labels to something like 100-150,
+   which helps but only buys us so much time and reduces the readability of the
+   code.
 
-2. Put all of the strings in another segment, which gives us 64KB
-of space, but will be harder to program since we'll have to switch segment
-registers.
+2. Put all of the strings in another segment, which gives us 64KB of space, but
+   will be harder to program since we'll have to switch segment registers.
 
 I'm choosing option 2 because all of the code dealing with actually storing the
 strings is constrained to a single function: `add_string_lookup`. It won't be
@@ -591,25 +591,25 @@ string table.
 
 Here's the new allocation:
 
-* 14 KB - Assembler code
-* 1 KB - Disk buffers
-* 10 KB - String buffer to be able to hold at least 320 unique strings
-* 1 KB - String lookup array
-* 2 KB - Label declaration array to store 255 labels
-* **Total: 28 KB**
+- 14 KB - Assembler code
+- 1 KB - Disk buffers
+- 10 KB - String buffer to be able to hold at least 320 unique strings
+- 1 KB - String lookup array
+- 2 KB - Label declaration array to store 255 labels
+- **Total: 28 KB**
 
-| Address     | Size  | Description                                         |
-|-------------|-------|-----------------------------------------------------|
-| 0x8000-B800 | 14 KB | The kernel loads the assembler into this address    |
-| 0xB800-BA00 | 512 B | Disk read buffer                                    |
-| 0xBA00-BC00 | 512 B | Disk write buffer                                   |
-| 0xBC00-E400 | 10 KB | Buffer to hold all of the strings (labels)          |
-| 0xE400-E800 | 1  KB | Sorted array for the string lookup                  |
-| 0xE800-F000 | 2  KB | Sorted array of the label declarations              |
+| Address     | Size  | Description                                      |
+| ----------- | ----- | ------------------------------------------------ |
+| 0x8000-B800 | 14 KB | The kernel loads the assembler into this address |
+| 0xB800-BA00 | 512 B | Disk read buffer                                 |
+| 0xBA00-BC00 | 512 B | Disk write buffer                                |
+| 0xBC00-E400 | 10 KB | Buffer to hold all of the strings (labels)       |
+| 0xE400-E800 | 1 KB  | Sorted array for the string lookup               |
+| 0xE800-F000 | 2 KB  | Sorted array of the label declarations           |
 
-**Lexical Grammar**
+#### Lexical Grammar
 
-```
+```text
 input:
   comment
   newline-or-eof
@@ -724,9 +724,9 @@ operator-or-punctuator: (one of)
   '"' ''' ',' '[' ']' '`'
 ```
 
-**Grammar**
+#### Grammar
 
-```
+```text
 compilation-unit:
   source-line*
 
@@ -815,6 +815,7 @@ primary-expression:
 ```
 
 ### Version 0.9 - r/m8 Instructions
+
 Ok, we've got a two-phase assembler that handles labels, jumps, and calls. This
 is a great stepping stone to fleshing out the assembler even more and adding
 more instructions. The next class of instructions to tackle are of the form
@@ -826,9 +827,9 @@ understand a large portion of the remaining instructions we want to support.
 
 **Phase A - ?**
 
-**Lexical Grammar**
+#### Lexical Grammar
 
-```
+```text
 input:
   comment
   newline-or-eof
@@ -913,9 +914,9 @@ operator-or-punctuator: (one of)
   '"' ''' ',' '[' ']' '`'
 ```
 
-**Grammar**
+#### Grammar
 
-```
+```text
 compilation-unit:
   source-line*
 
