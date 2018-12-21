@@ -49,7 +49,7 @@ export const builder = (argv: yargs.Argv) => {
     .epilog(epilog);
 };
 
-export const handler = (argv: yargs.Arguments) => {
+export const handler = (argv: yargs.Arguments<IRawArgs>) => {
   const options: ICopyOptions = resolveOptions(argv);
   const bytesWritten = copyBlock(
     options.sourceFile,
@@ -60,6 +60,16 @@ export const handler = (argv: yargs.Arguments) => {
   );
   console.log(colors.green(`Wrote ${bytesWritten} bytes to ${options.destinationFile}`));
 };
+
+interface IRawArgs {
+  src: string;
+  s: string;
+  dest: string;
+  d: string;
+  soff: string;
+  slen: string;
+  doff: string;
+}
 
 export interface ICopyOptions {
   sourceFile: string;
@@ -86,7 +96,7 @@ export function parseArgs(args: string[]): ICopyOptions {
   return resolveOptions(parsedArgs);
 }
 
-function resolveOptions(parsedArgs: yargs.Arguments): ICopyOptions {
+function resolveOptions(parsedArgs: yargs.Arguments<IRawArgs>): ICopyOptions {
   const sourceFile: string = path.resolve(parsedArgs.src);
   const destinationFile: string = path.resolve(parsedArgs.dest);
   const sourceOffset: number = parseSize(parsedArgs.soff || 0);

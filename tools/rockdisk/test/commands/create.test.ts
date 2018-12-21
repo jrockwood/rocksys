@@ -22,22 +22,22 @@ describe('Create CLI command', () => {
     it('should correctly resolve the outPath', () => {
       const expectedPath = path.join(process.cwd(), 'temp.bin');
       const actual = parseArgs(['--out', 'temp.bin']);
-      expect(actual).toEqual(jasmine.objectContaining({ outPath: expectedPath }));
+      expect(actual.outPath).toBe(expectedPath);
     });
 
     it('should default to using the floppy size if no size or type is specified', () => {
       const actual = parseArgs(['--out', 'temp.bin']);
-      expect(actual).toEqual(jasmine.objectContaining({ sizeInBytes: floppySize }));
+      expect(actual.sizeInBytes).toBe(floppySize);
     });
 
     it('should use the specified size', () => {
       const actual = parseArgs(['--out', 'temp.bin', '--size', '123']);
-      expect(actual).toEqual(jasmine.objectContaining({ sizeInBytes: 123 }));
+      expect(actual.sizeInBytes).toBe(123);
     });
 
     it('should use the specified type', () => {
       const actual = parseArgs(['--out', 'temp.bin', '--type', 'floppy']);
-      expect(actual).toEqual(jasmine.objectContaining({ sizeInBytes: floppySize }));
+      expect(actual.sizeInBytes).toBe(floppySize);
     });
   });
 });
