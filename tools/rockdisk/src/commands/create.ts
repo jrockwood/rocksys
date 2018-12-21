@@ -40,13 +40,22 @@ export const builder = (argv: yargs.Argv) => {
     .epilog(epilog);
 };
 
-export const handler = (argv: yargs.Arguments) => {
+export const handler = (argv: yargs.Arguments<IRawArgs>) => {
   const resolvedOptions: ICreateOptions = resolveOptions(argv);
   createBlankDisk(resolvedOptions.outPath, resolvedOptions.sizeInBytes);
   console.log(
     colors.green(`Created disk of size ${toFriendlySize(resolvedOptions.sizeInBytes)} to '${resolvedOptions.outPath}'.`)
   );
 };
+
+interface IRawArgs {
+  out: string;
+  o: string;
+  size: string;
+  s: string;
+  type: string;
+  t: string;
+}
 
 export interface ICreateOptions {
   outPath: string;
@@ -70,7 +79,7 @@ export function parseArgs(args: string[]): ICreateOptions {
   return resolveOptions(parsedArgs);
 }
 
-function resolveOptions(parsedArgs: yargs.Arguments): ICreateOptions {
+function resolveOptions(parsedArgs: yargs.Arguments<IRawArgs>): ICreateOptions {
   const outPath: string = path.resolve(parsedArgs.out);
   const sizeInBytes: number = parseSize(parsedArgs.size || floppySize);
   return {

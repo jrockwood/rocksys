@@ -2,7 +2,7 @@
   "editor.detectIndentation": false,
   "editor.formatOnSave": true,
   "editor.insertSpaces": true,
-  "editor.rulers": [34, 65, 80],
+  "editor.rulers": [100, 120],
   "editor.tabSize": 2,
   "editor.trimAutoWhitespace": true,
   "files.eol": "\n",
@@ -13,5 +13,8 @@
     "**/.svn": true,
     "**/CVS": true
   },
-  "files.trimTrailingWhitespace": true
+  "files.trimTrailingWhitespace": true,
+  "sortJSON.orderOverride": ["name", "version", "description"],
+  "sortJSON.orderUnderride": ["dependencies", "devDependencies"],
+  "typescript.tsdk": "node_modules\\typescript\\lib"
 }

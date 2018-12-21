@@ -1,16 +1,14 @@
-RockOS - Rockwood Operating System
-================================================================================
+# RockOS - Rockwood Operating System
 
 The first version of our journey to a 64-bit modern OS will be a 16-bit
 operating system run from the command line and uses less than 1MB of RAM. Its
 primary focus will be to handle the hardware and provide basic kernel services
 like file system access and memory management.
 
-Memory Map
---------------------------------------------------------------------------------
+## Memory Map
 
-*Summarized from the [OSDev wiki](http://wiki.osdev.org/Memory_Map_%28x86%29)
-and from [a CMU lecture on OSes](http://www.cs.cmu.edu/~410-s07/p4/p4-boot.pdf)*
+_Summarized from the [OSDev wiki](http://wiki.osdev.org/Memory_Map_%28x86%29)
+and from [a CMU lecture on OSes](http://www.cs.cmu.edu/~410-s07/p4/p4-boot.pdf)_
 
 The following table shows the state of the physical memory when the BIOS jumps
 into the bootloader code.
@@ -22,30 +20,28 @@ kernel. The memory map for this section is below, which is 32KB of total memory.
 
 _The address is a half-open range, not including the ending number_
 
-| Address            | Size  | Description                    |
-|--------------------|-------|--------------------------------|
-| `0x2000:F000-FFFF` | 4 KB  | Stack, growing down in memory  |
-| `0x2000:8000-F000` | 28 KB | Space for external programs    |
-| `0x2000:7000-8000` | 4 KB  | Kernel disk operation buffer   |
-| `0x2000:3000-7000` | 16 KB | Heap                           |
-| `0x2000:0000-3000` | 12 KB | Kernel executable code         |
+| Address            | Size  | Description                   |
+| ------------------ | ----- | ----------------------------- |
+| `0x2000:F000-FFFF` | 4 KB  | Stack, growing down in memory |
+| `0x2000:8000-F000` | 28 KB | Space for external programs   |
+| `0x2000:7000-8000` | 4 KB  | Kernel disk operation buffer  |
+| `0x2000:3000-7000` | 16 KB | Heap                          |
+| `0x2000:0000-3000` | 12 KB | Kernel executable code        |
 
-Sector Map
---------------------------------------------------------------------------------
+## Sector Map
 
 This is a sector map of what is on the floppy disk (each sector on a floppy
 drive is 512 bytes).
 
 | Logical Sectors | Address           | Description                     |
-|-----------------|-------------------|---------------------------------|
+| --------------- | ----------------- | ------------------------------- |
 | 0               | `0x00000-0x001FF` | Boot sector                     |
 | 1-48            | `0x00200-0x061FF` | Kernel (24K, 48 sectors)        |
 | 49-96           | `0x06200-0x0C1FF` | Assembler (24K, 48 sectors)     |
 | 97-1072         | `0x0C200-0x861FF` | Source File (500K, 976 sectors) |
 | 1073-1121       | `0x86200-0x8C3FF` | Assembled File (written) (24K)  |
 
-Steps
---------------------------------------------------------------------------------
+## Steps
 
 ### Version 0.1 - Hello World
 
@@ -116,8 +112,8 @@ map. We will set the necessary segment registers and set up the stack so the
 external programs won't have to worry about it.
 
 We will start executing the assembler by using a `call` instruction to an
-absolute memory location (0x2000:8000), so in order to return back to the
-kernel the assembler will use the `ret` instruction.
+absolute memory location (0x2000:8000), so in order to return back to the kernel
+the assembler will use the `ret` instruction.
 
 Additionally, RockOS will expose the following functions for external programs
 to use. They are in the same segment as the programs so they can simply use a
@@ -131,10 +127,10 @@ calls that are exposed by the kernel.
 
 ### Version 0.4 - Rudimentary Debugging
 
-I originally started working on what is now version 0.5, which adds a non-trivial
-amount of new code and quickly got frustrated at the lack of basic tools to help
-debug my code. So, I'm going to add some system calls to print the contents of
-the registers and segments of memory.
+I originally started working on what is now version 0.5, which adds a
+non-trivial amount of new code and quickly got frustrated at the lack of basic
+tools to help debug my code. So, I'm going to add some system calls to print the
+contents of the registers and segments of memory.
 
 I need some helper functions to convert numbers to hex strings, which I'll add
 first. Then the debugging functions.
