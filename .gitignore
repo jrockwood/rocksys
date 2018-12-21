@@ -1,5 +1,4 @@
 .vs/
 disks/*.vfd
 node_modules/
-tools/HxDen/HxD.ini
 tools/rockdisk/lib/
