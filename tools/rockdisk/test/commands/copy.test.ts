@@ -19,7 +19,10 @@ describe('Copy CLI command', () => {
         const expectedOutPath = path.join(process.cwd(), 'out.bin');
         const actual = parseArgs(['--dest', 'out.bin', '--src', 'in.bin']);
         expect(actual).toEqual(
-          jasmine.objectContaining({ sourceFile: expectedInPath, destinationFile: expectedOutPath })
+          jasmine.objectContaining({
+            sourceFile: expectedInPath,
+            destinationFile: expectedOutPath,
+          })
         );
       });
     });
@@ -27,7 +30,11 @@ describe('Copy CLI command', () => {
     it("should use default values when optional arguments aren't specified", () => {
       const actual = parseArgs(['--src', 'in.bin', '--dest', 'out.bin']);
       expect(actual).toEqual(
-        jasmine.objectContaining({ sourceOffset: 0, sourceLength: undefined, destinationOffset: 0 })
+        jasmine.objectContaining({
+          sourceOffset: 0,
+          sourceLength: undefined,
+          destinationOffset: 0,
+        })
       );
     });
 
