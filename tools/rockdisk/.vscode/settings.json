@@ -15,5 +15,6 @@
   },
   "files.trimTrailingWhitespace": true,
   "sortJSON.orderOverride": ["name", "version", "description"],
-  "sortJSON.orderUnderride": ["dependencies", "devDependencies"]
+  "sortJSON.orderUnderride": ["dependencies", "devDependencies"],
+  "typescript.tsdk": "node_modules\\typescript\\lib"
 }
