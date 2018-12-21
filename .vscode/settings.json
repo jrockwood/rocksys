@@ -2,6 +2,7 @@
   "editor.detectIndentation": false,
   "editor.formatOnSave": true,
   "editor.insertSpaces": true,
+  "editor.rulers": [34, 65, 80],
   "editor.tabSize": 2,
   "editor.trimAutoWhitespace": true,
   "files.eol": "\n",
@@ -29,11 +30,5 @@
   "rewrap.wholeComment": true,
   "rewrap.wrappingColumn": 80,
   "sortJSON.orderOverride": ["name", "version", "description"],
-  "sortJSON.orderUnderride": ["dependencies", "devDependencies"],
-  "typescript.extension.sortImports.maxNamedImportsInSingleLine": 3,
-  "typescript.extension.sortImports.omitSemicolon": false,
-  "typescript.extension.sortImports.pathSortOrder": ["package", "relativeUpLevel", "relativeDownLevel"],
-  "typescript.extension.sortImports.quoteStyle": "single",
-  "typescript.extension.sortImports.sortMethod": "path",
-  "typescript.extension.sortImports.sortOnSave": false
+  "sortJSON.orderUnderride": ["dependencies", "devDependencies"]
 }
