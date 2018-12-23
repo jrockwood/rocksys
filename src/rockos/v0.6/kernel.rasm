@@ -32,10 +32,12 @@
 ~e9 ~1f ~03 ; jmp os_print_memory               ; 0x1e
 ~e9 ~6c ~03 ; jmp os_read_sectors               ; 0x21
 ~e9 ~89 ~03 ; jmp os_write_sectors              ; 0x24
+~e9 ~66 ~04 ; jmp os_int_to_string              ; 0x27
+~e9 ~43 ~05 ; jmp os_string_to_int              ; 0x2a
+~e9 ~e0 ~05 ; jmp os_print_int                  ; 0x2d
 
 ; times 0x60 - ($ - $$) db 0
 
-                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -783,3 +785,297 @@
 
 ; times 0x490 - ($ - $$) db 0
                         ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x490
+; ------------------------------------------------------------------------------
+; os_int_to_string(number, format, *buffer)
+;   Converts an integer to a string using a specified format.
+;
+;   Input
+;     number - number to convert
+;     format - see the note below for formats
+;     buffer - memory address containing space for at least 7 characters
+;   Returns
+;     AX - 1 if successful, 0 if the format is invalid.
+;
+;   The format can be one of the following values:
+;   * 'd' - decimal number with no formatting
+;   * 'g' - decimal number with commas as thousands separators
+;   * 'x' - hexidecimal number with no prefix and lower-case letters
+;   * 'X' - hexidecimal number with no prefix and upper-case letters
+;   * '0x' - hexidecimal number with prefix and lower-case letters
+;   * '0X' - hexidecimal number with prefix and upper-case letters
+; ------------------------------------------------------------------------------
+
+; os_int_to_string:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~83 ~ec ~06 ; sub sp, 6                             ; allocate space for local variables
+~c7 ~46 ~fe ~0a ~00 ; mov word [bp - 2], 10         ; radix
+~c7 ~46 ~fc ~57 ~00 ; mov word [bp - 4], 'a' - 10   ; hex_base_char
+~c7 ~46 ~fa ~00 ~00 ; mov word [bp - 6], 0          ; comma_position
+
+    ; Set DI to the start of the buffer
+~8b ~7e ~08 ; mov di, [bp + 8]
+
+    ; --------------------------------------------------------------------------
+    ; Parse the format and set local variables
+~8b ~46 ~06 ; mov ax, [bp + 6]    ; format
+
+    ; --------------------------------------------------------------------------
+    ; Determine whether we'll need to print a comma
+
+    ; No comma for anything other than 'general' format
+~83 ~f8 ~67 ; cmp ax, 'g'
+~75 ~0c     ; jne .set_radix
+
+    ; No comma for numbers less than 1,000
+~81 ~7e ~04 ~e8 ~03 ; cmp word [bp + 4], 1000
+~7c ~05     ; jl .set_radix
+~c7 ~46 ~fa ~03 ~00 ; mov word [bp - 6], 3    ; comma_position
+
+    ; --------------------------------------------------------------------------
+    ; Determine which radix to use (10 for decimal or base 16 for hexidecimal)
+
+; .set_radix:
+~83 ~f8 ~67 ; cmp ax, 'g'
+~74 ~26     ; je .convert
+~83 ~f8 ~64 ; cmp ax, 'd'
+~74 ~21     ; je .convert
+~c7 ~46 ~fe ~10 ~00 ; mov word [bp - 2], 16   ; radix = 16 for hex numbers
+~3d ~30 ~78 ; cmp ax, '0x'
+~74 ~16     ; je .add_prefix
+~83 ~f8 ~78 ; cmp ax, 'x'
+~74 ~12     ; je .convert
+~c7 ~46 ~fc ~37 ~00 ; mov word [bp - 4], 'A'  ; hex_base_char = upper case
+~3d ~30 ~58 ; cmp ax, '0X'
+~74 ~07     ; je .add_prefix
+~83 ~f8 ~58 ; cmp ax, 'X'
+~74 ~03     ; je .convert
+~eb ~0b     ; jmp .error          ; unknown format
+; .add_prefix:
+~ab         ; stosw               ; the format string is the same as the prefix
+; .convert:
+~b8 ~20 ~05 ; mov ax, _int_to_dec
+~ff ~d0     ; call ax
+~b8 ~01 ~00 ; mov ax, 1           ; AX = 1 means success
+~eb ~09     ; jmp .exit
+; .error:
+~8b ~7e ~08 ; mov di, [bp + 8]    ; DI = buffer
+~c6 ~05 ~00 ; mov byte [di], 0    ; null-terminate the buffer
+~b8 ~00 ~00 ; mov ax, 0           ; AX = 0 means an error happened
+; .exit:
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x0520 - ($ - $$) db 0
+                                                          ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x0520
+; _int_to_dec:
+~8b ~46 ~04 ; mov ax, [bp + 4]    ; AX = number
+~b9 ~00 ~00 ; mov cx, 0           ; counter = 0
+~8b ~5e ~fe ; mov bx, [bp - 2]    ; divide by the radix
+; .push_digits:
+~ba ~00 ~00 ; mov dx, 0
+~f7 ~f3     ; div bx              ; divide DX:AX by BX and store the quotient:remainder in AX:DX
+~52         ; push dx             ; push the remainder (digit) onto the stack
+~41         ; inc cx              ; counter++
+~3b ~46 ~fe ; cmp ax, [bp - 2]    ; if the quotient >= radix, then keep pushing digits
+~7d ~f4     ; jge .push_digits
+~83 ~f8 ~00 ; cmp ax, 0
+~7f ~02     ; jg .write_significant
+~eb ~02     ; jmp .write_digits   ; skip writing the initial '0'
+; .write_significant:
+~50         ; push ax
+~41         ; inc cx
+; .write_digits:
+    ; Now write the digits in reverse order from most significant to least significant
+    ; See if we should print the comma
+~8b ~46 ~fa ; mov ax, [bp - 6]    ; comma_position
+~39 ~c1     ; cmp cx, ax
+~75 ~04     ; jne .write_digit
+; .write_comma:
+~c6 ~05 ~2c ; mov byte [di], ','
+~47         ; inc di
+; .write_digit:
+~58         ; pop ax
+~3c ~09     ; cmp al, 9
+~7f ~04     ; jg .convert_hex
+~04 ~30     ; add al, '0'         ; convert the decimal to ASCII
+~eb ~03     ; jmp .store_digit
+; .convert_hex:
+~02 ~46 ~fc ; add al, [bp - 4]    ; convert the hex to ASCII by adding the hex_base_char
+; .store_digit:
+~88 ~05     ; mov [di], al
+~47         ; inc di
+~e2 ~e4     ; loop .write_digits
+~c6 ~05 ~00 ; mov byte [di], 0    ; write the null termination
+~c3         ; ret
+
+; times 0x0570 - ($ - $$) db 0
+                                                          ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x0570
+; ------------------------------------------------------------------------------
+; os_string_to_int(string, format)
+;   Converts a string into an integer.
+;
+;   Input
+;     string - address of a null-terminated string to convert
+;     format - see the note below for formats
+;   Returns
+;     AX - the converted number
+;     DX - 1 if successful, 0 if the format is invalid.
+;
+;   The format can be one of the following values:
+;   * 'd' - decimal number with no formatting
+;   * 'g' - decimal number with commas as thousands separators
+;   * 'x' - hexidecimal number with no prefix and lower-case letters
+;   * 'X' - hexidecimal number with no prefix and upper-case letters
+;   * '0x' - hexidecimal number with prefix and lower-case letters
+;   * '0X' - hexidecimal number with prefix and upper-case letters
+;
+;   Parsing using a given format is done in a non-strict way. As such, the 'd'
+;   and 'g' format are treated the same and the 'x', 'X', '0x', and '0X' formats
+;   are treated the same.
+; ------------------------------------------------------------------------------
+
+; os_string_to_int:
+~55         ; push bp
+~89 ~e5     ; mov bp, sp
+~83 ~ec ~04 ; sub sp, 4               ; allocate space for local variables
+~c7 ~46 ~fe ~0a ~00 ; mov word [bp - 2], 10   ; radix = 10
+~c7 ~46 ~fc ~00 ~00 ; mov word [bp - 4], 0    ; result = 0
+
+    ; Set SI to the string
+~8b ~76 ~04 ; mov si, [bp + 4]
+
+    ; Skip the prefix if necessary.
+~8b ~46 ~06 ; mov ax, [bp + 6]    ; AX = format
+~3d ~30 ~78 ; cmp ax, '0x'
+~74 ~1b     ; je .skip_prefix
+~3d ~30 ~58 ; cmp ax, '0X'
+~74 ~16     ; je .skip_prefix
+~83 ~f8 ~78 ; cmp ax, 'x'
+~74 ~13     ; je .parse_hex
+~83 ~f8 ~58 ; cmp ax, 'X'
+~74 ~0e     ; je .parse_hex
+~83 ~f8 ~64 ; cmp ax, 'd'
+~74 ~0e     ; je .check_empty
+~83 ~f8 ~67 ; cmp ax, 'g'
+~74 ~09     ; je .check_empty
+~eb ~55     ; jmp .error
+; .skip_prefix:
+    ; Skip the '0x' or '0X' prefix
+~ac         ; lodsb
+~ac         ; lodsb
+; .parse_hex:
+~c7 ~46 ~fe ~10 ~00 ; mov word [bp - 2], 16   ; radix = 16
+; .check_empty:
+~ac         ; lodsb
+~3c ~00     ; cmp al, 0
+~74 ~49     ; je .error
+; .loop:
+~3c ~2c     ; cmp al, ','
+~74 ~02     ; je .skip_comma
+~eb ~07     ; jmp .conv_dec
+; .skip_comma:
+    ; Commas are only allowed if we're parsing decimals (not hex)
+~83 ~7e ~fe ~0a ; cmp word [bp - 2], 10 ; if (radix != 10) jmp .error
+~75 ~3d     ; jne .error
+~ac         ; lodsb               ; skip the comma
+; .conv_dec:
+~3c ~30     ; cmp al, '0'
+~7c ~38     ; jl .error
+~3c ~39     ; cmp al, '9'
+~7f ~04     ; jg .conv_hex_upper
+~2c ~30     ; sub al, '0'         ; convert ASCII to number
+~eb ~1a     ; jmp .conv
+; .conv_hex_upper:
+~3c ~41     ; cmp al, 'A'
+~7c ~2c     ; jl .error
+~3c ~46     ; cmp al, 'F'
+~7f ~06     ; jg .con_hex_lower
+~2c ~41     ; sub al, 'A'
+~04 ~0a     ; add al, 10
+~eb ~0c     ; jmp .conv
+; .con_hex_lower:
+~3c ~61     ; cmp al, 'a'
+~7c ~1e     ; jl .error
+~3c ~66     ; cmp al, 'f'
+~7f ~1a     ; jg .error
+~2c ~61     ; sub al, 'a'
+~04 ~0a     ; add al, 10
+; .conv:
+~b4 ~00     ; mov ah, 0
+~89 ~c3     ; mov bx, ax          ; BX = digit
+~8b ~46 ~fc ; mov ax, [bp - 4]    ; AX = number
+~f7 ~66 ~fe ; mul word [bp - 2]   ; AX *= radix
+~01 ~d8     ; add ax, bx          ; AX += digit
+~89 ~46 ~fc ; mov [bp - 4], ax    ; result = AX
+~ac         ; lodsb
+~3c ~00     ; cmp al, 0
+~75 ~b9     ; jne .loop
+~eb ~05     ; jmp .success
+; .error:
+~ba ~00 ~00 ; mov dx, 0           ; DX = error
+~eb ~03     ; jmp .exit
+; .success:
+~ba ~01 ~00 ; mov dx, 1           ; DX = success
+; .exit:
+~8b ~46 ~fc ; mov ax, [bp - 4]    ; AX = result
+~89 ~ec     ; mov sp, bp
+~5d         ; pop bp
+~c3         ; ret
+
+; times 0x0610 - ($ - $$) db 0
+                                           ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x0610
+; ------------------------------------------------------------------------------
+; os_print_int(number, format)
+;   Prints an integer using the specified format.
+;
+;   Input
+;     number - number to convert
+;     format - see the note below for formats
+;   Returns
+;     Nothing
+;
+;   The format can be one of the following values:
+;   * 'd' - decimal number with no formatting
+;   * 'g' - decimal number with commas as thousands separators
+;   * 'x' - hexidecimal number with no prefix and lower-case letters
+;   * 'X' - hexidecimal number with no prefix and upper-case letters
+;   * '0x' - hexidecimal number with prefix and lower-case letters
+;   * '0X' - hexidecimal number with prefix and upper-case letters
+; ------------------------------------------------------------------------------
+
+os_print_int:
+~55             ; push bp
+~89 ~e5         ; mov bp, sp
+~83 ~ec ~08     ; sub sp, 8               ; char[8] buffer
+
+~54             ; push sp                 ; buffer = &buffer
+~ff ~76 ~06     ; push word [bp + 6]      ; format = format
+~ff ~76 ~04     ; push word [bp + 4]      ; number = number
+~b8 ~27 ~00     ; mov ax, 0x27            ; os_int_to_string
+~ff ~d0         ; call ax
+~83 ~c4 ~06     ; add sp, 6
+
+~54             ; push sp                 ; buffer = &buffer
+~b8 ~03 ~00     ; mov ax, 0x03            ; os_print_string
+~ff ~d0         ; call ax
+~83 ~c4 ~02     ; add sp, 2
+
+~89 ~ec         ; mov sp, bp
+~5d             ; pop bp
+~c3             ; ret
+
+; times 0x9a0 - ($ - $$) db 0
+        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
