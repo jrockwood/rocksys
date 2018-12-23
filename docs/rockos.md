@@ -11,7 +11,7 @@ We'll use the memory from `0x0000:7E00` to `0x2000:FFFF` for our bootloader and
 kernel. The memory map for this section is below, which is 64KB of total memory,
 or in other words a single segment.
 
-_The address is a half-open range, not including the ending number_
+_Note:_ The address is a half-open range, not including the ending number
 
 | Address            | Size  | Description                   |
 | ------------------ | ----- | ----------------------------- |
@@ -150,6 +150,37 @@ it easier on the callers, we'll abstract away the low-level cylinder, head,
 sector (CHS) addressing and allow callers to pass in logical sectors, which are
 called logical block addresses (LBA). That means we have to implement a function
 to translate between LBA and CHS.
+
+## Version 0.6 - String Conversions
+
+The OS needs to expose two more functions for the assembler: `os_int_to_string`
+and `os_string_to_int`. The OS already has `os_print_hex_nibble`,
+`os_print_hex_byte`, and `os_print_hex_word` which does some of the work needed
+to implement `os_int_to_string`. The assembler will need `os_string_to_int` to
+compile hex pairs.
+
+We're also introducing the concept of kernel unit tests. As we add more and more
+functionality to the kernel, it becomes important that we don't regress any
+existing behavior, which is really, really hard to debug and diagnose. Believe
+me, I've spent hours trying to figure out why a function that previously worked
+no longer does because I added or removed an instruction, which then throws off
+the jump addresses.
+
+The unit tests will need to print out integers (number of tests that succeed or
+fail), so a handy `os_print_int` is supplied, which is easy to implement once
+`os_int_to_string` and `os_print_string` are available.
+
+And one last thing... guess what? Our kernel has now exceeded 3 disk sectors,
+which means that we need to load more of the kernel into memory from disk in the
+bootloader. We were only loading three sectors to get us started. Luckily we
+already have the code to read from an arbitrary number of sectors in
+`os_read_sectors`. We can just borrow that code, which we know already works.
+
+### Building
+
+There is another `build.cmd` file in the rockos directory which will build a
+disk to run the unit tests. This is separate from the `build.cmd` that is in the
+rockasm directories, which builds the assembler.
 
 ## References
 

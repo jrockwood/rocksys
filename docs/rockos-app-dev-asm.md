@@ -91,12 +91,16 @@ caller:
   - `os_print_hex_byte`
   - `os_print_hex_nibble`
   - `os_print_hex_word`
+  - `os_print_int`
   - `os_print_line`
   - `os_print_memory`
   - `os_print_newline`
   - `os_print_registers`
   - `os_print_space`
   - `os_print_string`
+- **[String](#string)**
+  - `os_int_to_string`
+  - `os_string_to_int`
 
 ### Disk
 
@@ -169,6 +173,25 @@ caller:
   - `word` - number to print
   - `should_print_prefix` - non-zero if the '0x' prefix should be printed
 
+#### `os_print_int(number, format)`
+
+> Prints an integer using a specified format.
+
+- **Address** - `0x2d`
+- **Returns** - Nothing
+- **Parameters**
+  - `number` - number to print
+  - `format` - see the note below for formats
+
+The format can be one of the following values:
+
+- `'d'` - decimal number with no formatting
+- `'g'` - decimal number with commas as thousands separators
+- `'x'` - hexidecimal number with no prefix and lower-case letters
+- `'X'` - hexidecimal number with no prefix and upper-case letters
+- `'0x'` - hexidecimal number with prefix and lower-case letters
+- `'0X'` - hexidecimal number with prefix and upper-case letters
+
 #### `os_print_line(str)`
 
 > Prints a null-terminated string to the screen followed by a new line sequence
@@ -221,5 +244,57 @@ caller:
 - **Returns** - Nothing
 - **Parameters**
   - `str` - address of string
+
+---
+
+### String
+
+#### `os_int_to_string(number, format, *buffer)`
+
+> Converts an integer to a string using a specified format.
+
+#### Call Information
+
+- **Address** - `0x27`
+- **Returns**
+  - `AX` - 1 if successful, 0 if the format is invalid.
+- **Parameters**
+  - `number` - number to convert
+  - `format` - see the note below for formats
+  - `*buffer` - memory address containing space for at least 7 characters
+
+The format can be one of the following values:
+
+- `'d'` - decimal number with no formatting
+- `'g'` - decimal number with commas as thousands separators
+- `'x'` - hexidecimal number with no prefix and lower-case letters
+- `'X'` - hexidecimal number with no prefix and upper-case letters
+- `'0x'` - hexidecimal number with prefix and lower-case letters
+- `'0X'` - hexidecimal number with prefix and upper-case letters
+
+#### `os_string_to_int(string, format)`
+
+> Converts a string into an integer.
+
+- **Address** - `0x2A`
+- **Returns**
+  - `AX` - the converted number
+  - `DX` - 1 if successful, 0 if the format is invalid.
+- **Parameters**
+  - `string` - address of a null-terminated string to convert
+  - `format` - see the note below for formats
+
+The format can be one of the following values:
+
+- `'d'` - decimal number with no formatting
+- `'g'` - decimal number with commas as thousands separators
+- `'x'` - hexidecimal number with no prefix and lower-case letters
+- `'X'` - hexidecimal number with no prefix and upper-case letters
+- `'0x'` - hexidecimal number with prefix and lower-case letters
+- `'0X'` - hexidecimal number with prefix and upper-case letters
+
+Parsing using a given format is done in a non-strict way. As such, the 'd' and
+'g' format are treated the same and the 'x', 'X', '0x', and '0X' formats are
+treated the same.
 
 ---
