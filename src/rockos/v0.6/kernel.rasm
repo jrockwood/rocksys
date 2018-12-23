@@ -587,7 +587,7 @@
 ;   at sector_number.
 ;
 ;   Input
-;     sector_number  - logical sector number to write (1-based)
+;     sector_number  - logical sector number to write (0-based)
 ;     sector_count   - number of sectors to write
 ;     source_address - source address
 ;   Returns
@@ -652,7 +652,7 @@
 ;   Reads the number of sectors from the floppy disk to the target address.
 ;
 ;   Input
-;     sector_number - logical sector number to read (1-based)
+;     sector_number - logical sector number to read (0-based)
 ;     sector_count  - number of sectors to read
 ;     dest_address  - destination address
 ;     is_read       - 1 if a read operation should be performed, 0 if a write
@@ -666,7 +666,7 @@
 ~89 ~e5     ; mov bp, sp
 
     ; --------------------------------------------------------------------------
-    ; Reset the floppy disk so the head is at sector 1.
+    ; Reset the floppy disk so the head is at the first sector.
 
 ~6a ~00     ; push 0              ; drive 0 = "A:", the first floppy drive
 ~b8 ~d0 ~03 ; mov ax, _reset_disk
@@ -698,8 +698,8 @@
 ~cd ~13     ; int 0x13
 ~72 ~15     ; jc .error           ; return if there was an error (CF is set)
 ~81 ~46 ~08 ~00 ~02 ; add word [bp + 8], 512   ; address += 512
-~ff ~46 ~04 ; inc word [bp + 4]        ; sector_number++
-~ff ~4e ~06 ; dec word [bp + 6]        ; sector_count--
+~ff ~46 ~04 ; inc word [bp + 4]   ; sector_number++
+~ff ~4e ~06 ; dec word [bp + 6]   ; sector_count--
 ~83 ~7e ~06 ~00 ; cmp word [bp + 6], 0     ; if (sector_count > 0) .read_sector
 ~7f ~d1     ; jg .loop
 ; .success:
