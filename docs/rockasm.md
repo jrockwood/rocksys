@@ -48,3 +48,52 @@ The assembler will then just write the same block of memory back to disk,
 starting at sector 1073 (`0x86200`), one block at a time. This admittedly
 doesn't do much, but it tests our OS functions and sets us up for assembling hex
 pairs in a future step.
+
+To get the file off of disk, we'll use the `rockdisk` tool to pull out a section
+of the floppy into a new file that we can use to compare against our
+hand-assembled version. There is a `postbuild.bat` file used to pull off 24KB
+starting from address `0x86200`.
+
+## Version 0.3
+
+This is the first step in a bootstrapping assembler. This version understands
+hex pairs that get translated into binary machine code. It also understands
+comments starting with the ; character and ending at a line break. Hex codes
+start with a ~ character so that it will be easier to parse the rudimentary
+grammar. The assembler is going to need to use the two new OS functions (as of
+v0.6), `os_int_to_string` and `os_string_to_int` to parse the hex pairs.
+
+The assembled file will get written back to disk at logical sector 1073
+(`0x86200`) and can be a maximum of 24KB.
+
+### Lexical Grammar
+
+```text
+input:
+  token
+  comment
+  whitespace
+
+token:
+  '~'
+
+comment:
+  ';' any char beside new line '\n'
+
+whitespace:
+  ' ', '\t', '\r', '\n'
+```
+
+### Grammar
+
+```text
+compilationUnit:
+  hexPairsOpt
+
+hexPairs:
+  hexPair hexPairs
+  hexPair
+
+hexPair:
+  '~' '[0-9a-f]' '[0-9a-f]'
+```
