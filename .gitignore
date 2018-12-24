@@ -1,4 +1,5 @@
 .vs/
+assembled.bin
 disks/*.vfd
 node_modules/
 tools/rockdisk/lib/
