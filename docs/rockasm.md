@@ -97,3 +97,121 @@ hexPairs:
 hexPair:
   '~' '[0-9a-f]' '[0-9a-f]'
 ```
+
+## Version 0.4
+
+Woohoo! We have a working assembler. It's rudimentary, but it's a great start.
+We still have to hand-assemble code, but at least we don't have to manually
+enter it into a hex editor anymore.
+
+The biggest pain point now is manually counting bytes for `jmp` and `call`
+statements, especially when adding/removing lines of code. It's really easy to
+forget to update references. So we'll need to support some kind of labels. This
+has several implications:
+
+1. We need a data structure to store the label's name and the address of the
+   label. We'll use a sorted array using binary search since that's simpler to
+   implement than a hash table. The kernel still doesn't have any heap or memory
+   management, so we will need to manage our own memory.
+
+2. The assembler will need two passes instead of one. This is because labels can
+   be used before they're declared. We should also probably implement a lexing
+   phase and a compile phase. That will allow us to store larger programs all in
+   memory instead of paging them in from disk. But that can come later.
+
+3. We have the concept of locally-scoped labels that start with a '.' period
+   character.
+
+### Phases
+
+**Phase A** Build the ability to correctly lex identifiers and parse labels.
+
+**Phase B** Implement a 2-pass compiler and count the bytes. Pass 1 will lex and
+parse and count the bytes and pass 2 will do the actual compiling and write out
+to disk.
+
+**Phase C** Write a sorted array with binary search to store the label/ address
+pairs. Since this is a general-purpose algorithm, we'll add it to the kernel.
+
+**Phase D** Pre-allocate a chunk of memory that will be used for storing the
+label strings and create a sorted array of pointers into the string table.
+During pass 0 every time a label declaration is encountered, check for a
+duplicate in the lookup. If a duplicate is found, report an error, otherwise add
+it to the string table and the lookup. This means that locally-scoped labels
+starting with a '.' have to be unique for now. Also add a functon that prints
+the string lookup table to verify that it's working.
+
+**Phase E** During pass 0 create the lookup table of labels with their address
+(which is just the byte count at the point when the label is declared). It will
+also detect duplicate labels and report an error. In addition, support local
+(private) labels, which start with a '.'. Each label declaration will store a
+sorted array of a maximum of 10 child label declarations, which should be
+sufficient for now.
+
+To get each phase working we have to keep bootstrapping the assembler with new
+functionality. Here's the general process:
+
+1. Program the new functionality for phase X in `rockasm-x.rasm`.
+2. Use the assembler from phase X-1 to assemble phase X.
+3. Start phase X+1 by creating `rockasm-x+1.rasm` using the new functionality,
+   but not adding any new functionality (for example uncommenting labels if we
+   just added label support).
+4. Make sure `rockasm-x+1.rasm` gets assembled correctly using phase X.
+5. Repeat.
+
+### Lexical Grammar
+
+```text
+input:
+  token
+  comment
+  whitespace
+
+token:
+  identifier
+  operator-or-punctuator
+
+identifier:
+  identifier-start-character identifier-part-character*
+
+identifier-start-character:
+  letter-character
+  '.', '_', '?'
+
+identifier-part-character:
+  letter-character
+  decimal-digit-character
+  '_', '$', '#', '@', '~', '.', '?'
+
+letter-character:
+  'A'-'Z', 'a'-'z'
+
+decimal-digit-character:
+  '0'-'9'
+
+operator-or-punctuator: one of
+  '~' ':'
+
+comment:
+  ';' any char beside new line '\n'
+
+whitespace:
+  ' ', '\t', '\r', '\n'
+```
+
+### Grammar
+
+```text
+compilation-unit:
+  statement*
+
+statement:
+  label-declaration
+  hex-pair
+
+label-declaration:
+  identifier ':'
+
+hex-pair:
+  '~' '[0-9a-f]' '[0-9a-f]'
+```
