@@ -1,9 +1,0 @@
-{
-  "extends": "tslint:latest",
-  "rules": {
-    "no-console": false,
-    "quotemark": [true, "single", "jsx-double", "avoid-escape", "avoid-template"],
-    "object-literal-sort-keys": false,
-    "trailing-comma": false
-  }
-}

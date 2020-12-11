@@ -32,7 +32,7 @@ export function copyBlock(
   destinationDiskPath: string,
   sourceOffset?: number,
   sourceLength?: number,
-  destinationOffset?: number
+  destinationOffset?: number,
 ): number {
   // open the source and destination files
   const sourceFile: number = openForRead(sourceFilePath);

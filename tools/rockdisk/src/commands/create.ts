@@ -12,7 +12,7 @@ const epilog =
 
 export const command = 'create';
 export const describe = 'Creates a blank disk for use in a virtual machine';
-export const builder = (argv: yargs.Argv) => {
+export const builder = (argv: yargs.Argv): yargs.Argv<{ out: string; size?: string; type?: string }> => {
   return argv
     .usage('Usage: rockdisk create --out <destFile> [--size <bytes> | --type <diskType>]')
     .option('out', {
@@ -40,21 +40,20 @@ export const builder = (argv: yargs.Argv) => {
     .epilog(epilog);
 };
 
-export const handler = (argv: yargs.Arguments<IRawArgs>) => {
+export const handler = (argv: yargs.Arguments<IRawArgs>): void => {
   const resolvedOptions: ICreateOptions = resolveOptions(argv);
   createBlankDisk(resolvedOptions.outPath, resolvedOptions.sizeInBytes);
   console.log(
-    colors.green(`Created disk of size ${toFriendlySize(resolvedOptions.sizeInBytes)} to '${resolvedOptions.outPath}'.`)
+    colors.green(
+      `Created disk of size ${toFriendlySize(resolvedOptions.sizeInBytes)} to '${resolvedOptions.outPath}'.`,
+    ),
   );
 };
 
 interface IRawArgs {
   out: string;
-  o: string;
-  size: string;
-  s: string;
-  type: string;
-  t: string;
+  size?: string;
+  type?: string;
 }
 
 export interface ICreateOptions {

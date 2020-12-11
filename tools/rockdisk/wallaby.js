@@ -1,4 +1,4 @@
-module.exports = function(w) {
+module.exports = function () {
   return {
     files: ['src/**/*.ts', 'test/**/!(*.test).ts'],
     tests: ['test/**/*.test.ts'],

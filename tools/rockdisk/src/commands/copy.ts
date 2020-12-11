@@ -12,7 +12,9 @@ const epilog =
 
 export const command = 'copy';
 export const describe = 'Copies a file into a disk image at a particular offset';
-export const builder = (argv: yargs.Argv) => {
+export const builder = (
+  argv: yargs.Argv,
+): yargs.Argv<{ src: string; dest: string; soff?: string; slen?: string; doff?: string }> => {
   return argv
     .usage('Usage: rockdisk copy --src <sourceFile> --dest <destFile> [options]')
     .option('src', {
@@ -34,41 +36,40 @@ export const builder = (argv: yargs.Argv) => {
     .option('soff', {
       describe: 'Source offset from which to start copying',
       requiresArg: true,
-      default: 0,
+      type: 'string',
     })
     .option('slen', {
       describe: 'Amount of data to copy in bytes',
       requiresArg: true,
+      type: 'string',
     })
     .option('doff', {
       describe: 'Destination offset to start writing',
       requiresArg: true,
-      default: 0,
+      type: 'string',
     })
     .strict()
     .epilog(epilog);
 };
 
-export const handler = (argv: yargs.Arguments<IRawArgs>) => {
+export const handler = (argv: yargs.Arguments<IRawArgs>): void => {
   const options: ICopyOptions = resolveOptions(argv);
   const bytesWritten = copyBlock(
     options.sourceFile,
     options.destinationFile,
     options.sourceOffset,
     options.sourceLength,
-    options.destinationOffset
+    options.destinationOffset,
   );
   console.log(colors.green(`Wrote ${bytesWritten} bytes to ${options.destinationFile}`));
 };
 
 interface IRawArgs {
   src: string;
-  s: string;
   dest: string;
-  d: string;
-  soff: string;
-  slen: string;
-  doff: string;
+  soff?: string;
+  slen?: string;
+  doff?: string;
 }
 
 export interface ICopyOptions {
