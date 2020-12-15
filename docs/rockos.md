@@ -112,8 +112,8 @@ Internally, we'll implement a table of public functions as a series of `jmp`
 instructions to the start of each function. That allows the kernel to change
 without requiring the external programs to change.
 
-See the `rockos-app-dev-asm.md` file for a description of all of the system
-calls that are exposed by the kernel.
+See the [rockos-app-dev-asm.md](rockos-app-dev-asm.md) file for a description of
+all of the system calls that are exposed by the kernel.
 
 ### Bootloader
 
