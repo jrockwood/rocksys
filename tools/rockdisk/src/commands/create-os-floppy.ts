@@ -1,7 +1,7 @@
 import * as colors from 'colors';
 import * as path from 'path';
 import * as yargs from 'yargs';
-import { compileOs, CompileOsOptions, defaultOsFloppySectorMap } from '../os-disk';
+import { BootableOsFloppyOptions, createBootableOsFloppy, defaultOsFloppySectorMap } from '../os-disk';
 import { parseSectorMapArg, resolveAsmAndOsPaths } from './parse-args';
 
 const epilog =
@@ -10,11 +10,13 @@ const epilog =
   'If sectorMap is provided it takes the following JSON format:\n' +
   `${JSON.stringify(defaultOsFloppySectorMap, undefined, '  ')}\n`;
 
-export const command = 'compile-os';
-export const describe = 'Compiles the bootstrap and kernel source files';
+export const command = 'create-os-floppy';
+export const describe = 'Creates a virtual floppy disk loaded with the OS and assembler';
 export const builder = (argv: yargs.Argv): yargs.Argv<RawArgs> => {
   return argv
-    .usage(`Usage: rockdisk ${command} --destVfd <path> --srcDir <path> --asmVersion <v> --osVersion <v> [options]`)
+    .usage(
+      `Usage: rockdisk ${command} --destVfd <path> --srcDir <path> --srcFile <path> --asmVersion <v> --osVersion <v> [options]`,
+    )
     .option('destVfd', {
       alias: 'd',
       describe: 'Destination floppy virtual disk image',
@@ -26,6 +28,13 @@ export const builder = (argv: yargs.Argv): yargs.Argv<RawArgs> => {
     .option('srcDir', {
       alias: 's',
       describe: "Source directory which contains 'rockasm' and 'rockos' subdirectories",
+      requiresArg: true,
+      type: 'string',
+      demandOption: true,
+      normalize: true,
+    })
+    .option('srcFile', {
+      describe: 'Source file to compile',
       requiresArg: true,
       type: 'string',
       demandOption: true,
@@ -52,37 +61,27 @@ export const builder = (argv: yargs.Argv): yargs.Argv<RawArgs> => {
     .epilog(epilog);
 };
 
-export const handler = async (argv: yargs.Arguments<RawArgs>): Promise<void> => {
-  const options: CompileOsOptions = resolveOptions(argv);
-  const succeeded = await compileOs(options);
-  if (succeeded) {
-    console.log(
-      colors.green(
-        `Compiled bootstrap, kernel, and kernel tests successfully into '${options.bootloadBinDestinationFile}', ` +
-          `'${options.kernelBinDestinationFile}', and '${options.kernelUnitTestBinFile}' respectively.`,
-      ),
-    );
-    process.exit(0);
-  } else {
-    console.log(colors.red('Build failed'));
-    process.exit(1);
-  }
+export const handler = (argv: yargs.Arguments<RawArgs>): void => {
+  const resolvedOptions: BootableOsFloppyOptions = resolveOptions(argv);
+  createBootableOsFloppy(resolvedOptions);
+  console.log(colors.green(`Created OS disk at '${resolvedOptions.destinationFloppyImage}'.`));
 };
 
 interface RawArgs {
   destVfd: string;
   srcDir: string;
+  srcFile: string;
   asmVersion: string;
   osVersion: string;
   sectorMap?: string;
 }
 
 /**
- * Parses the arguments specific to the 'buildos' command. Exposed mainly for unit tests.
+ * Parses the arguments specific to the command. Exposed mainly for unit tests.
  */
-export function parseArgs(args: string[]): CompileOsOptions {
-  if (args.length === 0 || args[0] !== 'compile-os') {
-    args = ['compile-os'].concat(args);
+export function parseArgs(args: string[]): BootableOsFloppyOptions {
+  if (args.length === 0 || args[0] !== command) {
+    args = [command].concat(args);
   }
 
   const parsedArgs = yargs(args)
@@ -94,33 +93,17 @@ export function parseArgs(args: string[]): CompileOsOptions {
   return resolveOptions(parsedArgs);
 }
 
-function resolveOptions(parsedArgs: yargs.Arguments<RawArgs>): CompileOsOptions {
+function resolveOptions(parsedArgs: yargs.Arguments<RawArgs>): BootableOsFloppyOptions {
   const destinationFloppyImage: string = path.resolve(parsedArgs.destVfd);
   const paths = resolveAsmAndOsPaths(parsedArgs.srcDir, parsedArgs.asmVersion, parsedArgs.osVersion);
-
-  const bootloadSourceFile = path.resolve(paths.osDir, 'bootload.rasm');
-  const kernelSourceFile = path.resolve(paths.osDir, 'kernel.rasm');
-  const kernelUnitTestSourceFile = path.resolve(paths.osDir, 'kernel_test.rasm');
-  const kernelUnitTestBinFile = path.resolve(paths.osDir, 'kernel_test.bin');
-
+  const sourceFileToCompile = path.resolve(parsedArgs.srcFile);
   const sectorMap = parseSectorMapArg(parsedArgs.sectorMap);
-
   return {
     destinationFloppyImage,
+    bootloadBinFile: paths.osBootloadBin,
+    kernelBinFile: paths.osKernelBin,
     assemblerBinFile: paths.assemblerBin,
-    assemblerVersion: paths.assemblerVersion.toString(),
-
-    previousVersionBootloadBinFile: paths.previousOsBootloadBin,
-    previousVersionKernelBinFile: paths.previousOsKernelBin,
-
-    bootloadSourceFile,
-    kernelSourceFile,
-    kernelUnitTestSourceFile,
-
-    bootloadBinDestinationFile: paths.osBootloadBin,
-    kernelBinDestinationFile: paths.osKernelBin,
-    kernelUnitTestBinFile,
-
+    sourceFileToCompile,
     sectorMap,
   };
 }
