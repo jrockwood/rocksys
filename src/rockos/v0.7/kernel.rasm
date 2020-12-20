@@ -1,7 +1,7 @@
 ;
 ; kernel.rasm (Rockwood OS Kernel)
 ; --------------------------------
-; Copyright (c) 2017 Justin Rockwood. All rights reserved.
+; Copyright (c) 2020 Justin Rockwood. All rights reserved.
 ;
 ; There is a pattern of leaving gaps between functions in case we need to extend
 ; them in the future. This ensures that we don't have to change memory addresses
