@@ -9,8 +9,8 @@ describe('OsDisk', () => {
     const bootloadBinFile = 'bootload.bin';
     const kernelBinFile = 'kernel.bin';
     const assemblerBinFile = 'assember.bin';
-    const sourceFile = 'source.rasm';
-    const floppyBinFile = 'osdisk.vfd';
+    const sourceFileToCompile = 'source.rasm';
+    const destinationFloppyImage = 'osdisk.vfd';
 
     const bootloadBinContents = new Uint8Array(['b', '0', '0', '7'].map((x) => x.charCodeAt(0)));
     const kernelBinContents = new Uint8Array([1, 2, 3, 4]);
@@ -22,7 +22,7 @@ describe('OsDisk', () => {
         [bootloadBinFile]: Buffer.from(bootloadBinContents),
         [kernelBinFile]: Buffer.from(kernelBinContents),
         [assemblerBinFile]: Buffer.from(assemblerBinContents),
-        [sourceFile]: sourceFileContents,
+        [sourceFileToCompile]: sourceFileContents,
       });
     });
 
@@ -56,25 +56,31 @@ describe('OsDisk', () => {
     }
 
     it('should create a floppy disk', () => {
-      createBootableOsFloppy(floppyBinFile, bootloadBinFile, kernelBinFile, assemblerBinFile, sourceFile);
-      expect(fsExtra.existsSync(floppyBinFile)).toBe(true);
+      createBootableOsFloppy({
+        destinationFloppyImage,
+        bootloadBinFile,
+        kernelBinFile,
+        assemblerBinFile,
+        sourceFileToCompile,
+      });
+      expect(fsExtra.existsSync(destinationFloppyImage)).toBe(true);
 
-      const stats = fsExtra.statSync(floppyBinFile);
+      const stats = fsExtra.statSync(destinationFloppyImage);
       expect(stats.size).toBe(floppySize);
     });
 
     it('should add the bootloader, kernel, assembler, and source file to the floppy disk image', () => {
-      createBootableOsFloppy(
-        floppyBinFile,
+      createBootableOsFloppy({
+        destinationFloppyImage,
         bootloadBinFile,
         kernelBinFile,
         assemblerBinFile,
-        sourceFile,
-        defaultOsFloppySectorMap,
-      );
+        sourceFileToCompile,
+        sectorMap: defaultOsFloppySectorMap,
+      });
 
       const expectedBuffer: Buffer = createExpectedBuffer();
-      const buffer: Buffer = fsExtra.readFileSync(floppyBinFile);
+      const buffer: Buffer = fsExtra.readFileSync(destinationFloppyImage);
       expect(buffer).toEqual(expectedBuffer);
     });
 
@@ -83,18 +89,18 @@ describe('OsDisk', () => {
         [bootloadBinFile]: Buffer.from(new Array(floppyBytesPerSector * 2)),
         [kernelBinFile]: Buffer.from(kernelBinContents),
         [assemblerBinFile]: Buffer.from(assemblerBinContents),
-        [sourceFile]: sourceFileContents,
+        [sourceFileToCompile]: sourceFileContents,
       });
 
       const action = () =>
-        createBootableOsFloppy(
-          floppyBinFile,
+        createBootableOsFloppy({
+          destinationFloppyImage,
           bootloadBinFile,
           kernelBinFile,
           assemblerBinFile,
-          sourceFile,
-          defaultOsFloppySectorMap,
-        );
+          sourceFileToCompile,
+          sectorMap: defaultOsFloppySectorMap,
+        });
 
       expect(action).toThrowError(`The size of '${bootloadBinFile}' exceeds the maximum size of 512.`);
     });
@@ -106,20 +112,20 @@ describe('OsDisk', () => {
           new Array(defaultOsFloppySectorMap.kernelSizeInSectors * floppyBytesPerSector + 1),
         ),
         [assemblerBinFile]: Buffer.from(assemblerBinContents),
-        [sourceFile]: sourceFileContents,
+        [sourceFileToCompile]: sourceFileContents,
       });
 
       const action = () =>
-        createBootableOsFloppy(
-          floppyBinFile,
+        createBootableOsFloppy({
+          destinationFloppyImage,
           bootloadBinFile,
           kernelBinFile,
           assemblerBinFile,
-          sourceFile,
-          defaultOsFloppySectorMap,
-        );
+          sourceFileToCompile,
+          sectorMap: defaultOsFloppySectorMap,
+        });
 
-      expect(action).toThrowError(`The size of '${kernelBinFile}' exceeds the maximum size of 24576.`);
+      expect(action).toThrowError(`The size of '${kernelBinFile}' exceeds the maximum size of 28672.`);
     });
 
     it('should throw if the contents of the assembler section are greater than the allocated space', () => {
@@ -129,20 +135,20 @@ describe('OsDisk', () => {
         [assemblerBinFile]: Buffer.from(
           new Array(defaultOsFloppySectorMap.assembledFileSizeInSectors * floppyBytesPerSector + 1),
         ),
-        [sourceFile]: sourceFileContents,
+        [sourceFileToCompile]: sourceFileContents,
       });
 
       const action = () =>
-        createBootableOsFloppy(
-          floppyBinFile,
+        createBootableOsFloppy({
+          destinationFloppyImage,
           bootloadBinFile,
           kernelBinFile,
           assemblerBinFile,
-          sourceFile,
-          defaultOsFloppySectorMap,
-        );
+          sourceFileToCompile,
+          sectorMap: defaultOsFloppySectorMap,
+        });
 
-      expect(action).toThrowError(`The size of '${assemblerBinFile}' exceeds the maximum size of 24576.`);
+      expect(action).toThrowError(`The size of '${assemblerBinFile}' exceeds the maximum size of 28672.`);
     });
 
     it('should throw if the contents of the source file section are greater than the allocated space', () => {
@@ -150,7 +156,7 @@ describe('OsDisk', () => {
         [bootloadBinFile]: Buffer.from(bootloadBinContents),
         [kernelBinFile]: Buffer.from(kernelBinContents),
         [assemblerBinFile]: Buffer.from(assemblerBinContents),
-        [sourceFile]: Buffer.alloc(
+        [sourceFileToCompile]: Buffer.alloc(
           defaultOsFloppySectorMap.sourceFileSizeInSectors * floppyBytesPerSector + 1,
           'a',
           'ascii',
@@ -158,16 +164,16 @@ describe('OsDisk', () => {
       });
 
       const action = () =>
-        createBootableOsFloppy(
-          floppyBinFile,
+        createBootableOsFloppy({
+          destinationFloppyImage,
           bootloadBinFile,
           kernelBinFile,
           assemblerBinFile,
-          sourceFile,
-          defaultOsFloppySectorMap,
-        );
+          sourceFileToCompile,
+          sectorMap: defaultOsFloppySectorMap,
+        });
 
-      expect(action).toThrowError(`The size of '${sourceFile}' exceeds the maximum size of 499712.`);
+      expect(action).toThrowError(`The size of '${sourceFileToCompile}' exceeds the maximum size of 1024000.`);
     });
   });
 
