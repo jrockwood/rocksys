@@ -1,0 +1,15 @@
+{
+  "bootSector": 0,
+
+  "kernelSector": 1,
+  "kernelSizeInSectors": 48,
+
+  "assemblerSector": 49,
+  "assembledFileSizeInSectors": 48,
+
+  "sourceFileSector": 97,
+  "sourceFileSizeInSectors": 976,
+
+  "assembledFileSector": 1073,
+  "assemblerSizeInSectors": 48
+}
