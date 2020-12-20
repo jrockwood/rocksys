@@ -12,9 +12,7 @@ const epilog =
 
 export const command = 'copy';
 export const describe = 'Copies a file into a disk image at a particular offset';
-export const builder = (
-  argv: yargs.Argv,
-): yargs.Argv<{ src: string; dest: string; soff?: string; slen?: string; doff?: string }> => {
+export const builder = (argv: yargs.Argv): yargs.Argv<RawArgs> => {
   return argv
     .usage('Usage: rockdisk copy --src <sourceFile> --dest <destFile> [options]')
     .option('src', {
@@ -52,8 +50,8 @@ export const builder = (
     .epilog(epilog);
 };
 
-export const handler = (argv: yargs.Arguments<IRawArgs>): void => {
-  const options: ICopyOptions = resolveOptions(argv);
+export const handler = (argv: yargs.Arguments<RawArgs>): void => {
+  const options: CopyOptions = resolveOptions(argv);
   const bytesWritten = copyBlock(
     options.sourceFile,
     options.destinationFile,
@@ -64,7 +62,7 @@ export const handler = (argv: yargs.Arguments<IRawArgs>): void => {
   console.log(colors.green(`Wrote ${bytesWritten} bytes to ${options.destinationFile}`));
 };
 
-interface IRawArgs {
+interface RawArgs {
   src: string;
   dest: string;
   soff?: string;
@@ -72,7 +70,7 @@ interface IRawArgs {
   doff?: string;
 }
 
-export interface ICopyOptions {
+export interface CopyOptions {
   sourceFile: string;
   destinationFile: string;
   sourceOffset: number;
@@ -83,7 +81,7 @@ export interface ICopyOptions {
 /**
  * Parses the arguments specific to the 'copy' command. Exposed mainly for unit tests.
  */
-export function parseArgs(args: string[]): ICopyOptions {
+export function parseArgs(args: string[]): CopyOptions {
   if (args.length === 0 || args[0] !== 'copy') {
     args = ['copy'].concat(args);
   }
@@ -97,7 +95,7 @@ export function parseArgs(args: string[]): ICopyOptions {
   return resolveOptions(parsedArgs);
 }
 
-function resolveOptions(parsedArgs: yargs.Arguments<IRawArgs>): ICopyOptions {
+function resolveOptions(parsedArgs: yargs.Arguments<RawArgs>): CopyOptions {
   const sourceFile: string = path.resolve(parsedArgs.src);
   const destinationFile: string = path.resolve(parsedArgs.dest);
   const sourceOffset: number = parseSize(parsedArgs.soff || 0);

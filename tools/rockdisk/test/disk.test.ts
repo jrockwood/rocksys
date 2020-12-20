@@ -1,6 +1,12 @@
 import * as fsExtra from 'fs-extra';
-import { copyBlock, createBlankDisk, floppySize, toFriendlySize } from '../src/disk';
-import { safeDeleteFiles } from './test-utils';
+import mock = require('mock-fs');
+import {
+  copyBlock,
+  createBlankDisk,
+  floppySize,
+  toFriendlySize,
+  trimTrailingZerosAndAlignTo16ByteBoundary,
+} from '../src/disk';
 
 describe('Disk', () => {
   describe('toFriendlySize()', () => {
@@ -15,6 +21,14 @@ describe('Disk', () => {
   });
 
   describe('createBlankDisk()', () => {
+    beforeEach(() => {
+      mock();
+    });
+
+    afterEach(() => {
+      mock.restore();
+    });
+
     it('should create a blank file zeroed out', () => {
       createBlankDisk('temp', 10);
 
@@ -31,12 +45,14 @@ describe('Disk', () => {
     const destContents: Uint8Array = new Uint8Array([0xa, 0xb, 0xc, 0xd, 0xe, 0xf]);
 
     beforeEach(() => {
-      fsExtra.writeFileSync('in.bin', sourceContents);
-      fsExtra.writeFileSync('out.bin', destContents);
+      mock({
+        'in.bin': Buffer.from(sourceContents),
+        'out.bin': Buffer.from(destContents),
+      });
     });
 
     afterEach(() => {
-      safeDeleteFiles('in.bin', 'out.bin');
+      mock.restore();
     });
 
     it('should copy the source file into the destination at a specified destination offset', () => {
@@ -53,6 +69,60 @@ describe('Disk', () => {
 
     it('should return the total bytes read', () => {
       expect(copyBlock('in.bin', 'out.bin')).toBe(sourceContents.length);
+    });
+  });
+
+  describe('trimTrailingZerosAndAlignTo16ByteBoundary()', () => {
+    afterEach(() => {
+      mock.restore();
+    });
+
+    it('should not trim anything if there are no trailing zeros', () => {
+      mock({ 'in.bin': Buffer.from(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8])) });
+      const bytesTrimmed = trimTrailingZerosAndAlignTo16ByteBoundary('in.bin');
+      expect(bytesTrimmed).toBe(0);
+      expect(fsExtra.readFileSync('in.bin')).toEqual(
+        Buffer.from(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8])),
+      );
+    });
+
+    it('should not trim any zeros if they fill out the 16 byte boundary', () => {
+      mock({ 'in.bin': Buffer.from(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 0, 0, 0, 0, 0])) });
+      const bytesTrimmed = trimTrailingZerosAndAlignTo16ByteBoundary('in.bin');
+      expect(bytesTrimmed).toBe(0);
+      expect(fsExtra.readFileSync('in.bin')).toEqual(
+        Buffer.from(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 0, 0, 0, 0, 0])),
+      );
+    });
+
+    it('should pad extra zeros to fill up to a 16 byte boundary', () => {
+      mock({ 'in.bin': Buffer.from(new Uint8Array([1, 2, 3, 4])) });
+      const bytesTrimmed = trimTrailingZerosAndAlignTo16ByteBoundary('in.bin');
+      expect(bytesTrimmed).toBe(-12);
+      expect(fsExtra.readFileSync('in.bin')).toEqual(
+        Buffer.from(new Uint8Array([1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])),
+      );
+    });
+
+    it('should trim trailing zeros until a 16 byte boundary', () => {
+      // prettier-ignore
+      mock({ 'in.bin': Buffer.from(new Uint8Array([
+        1, 2, 3, 4, 5, 6, 7, 8,  1, 2, 3, 4, 5, 6, 7, 8,
+        1, 2, 3, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,
+      ])) });
+      const bytesTrimmed = trimTrailingZerosAndAlignTo16ByteBoundary('in.bin');
+      expect(bytesTrimmed).toBe(32);
+      expect(fsExtra.readFileSync('in.bin')).toEqual(
+        Buffer.from(
+          // prettier-ignore
+          new Uint8Array([
+            1, 2, 3, 4, 5, 6, 7, 8,  1, 2, 3, 4, 5, 6, 7, 8,
+            1, 2, 3, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,
+          ]),
+        ),
+      );
     });
   });
 });
