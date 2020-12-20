@@ -12,7 +12,7 @@ const epilog =
 
 export const command = 'create';
 export const describe = 'Creates a blank disk for use in a virtual machine';
-export const builder = (argv: yargs.Argv): yargs.Argv<{ out: string; size?: string; type?: string }> => {
+export const builder = (argv: yargs.Argv): yargs.Argv<RawArgs> => {
   return argv
     .usage('Usage: rockdisk create --out <destFile> [--size <bytes> | --type <diskType>]')
     .option('out', {
@@ -40,8 +40,8 @@ export const builder = (argv: yargs.Argv): yargs.Argv<{ out: string; size?: stri
     .epilog(epilog);
 };
 
-export const handler = (argv: yargs.Arguments<IRawArgs>): void => {
-  const resolvedOptions: ICreateOptions = resolveOptions(argv);
+export const handler = (argv: yargs.Arguments<RawArgs>): void => {
+  const resolvedOptions: CreateOptions = resolveOptions(argv);
   createBlankDisk(resolvedOptions.outPath, resolvedOptions.sizeInBytes);
   console.log(
     colors.green(
@@ -50,13 +50,13 @@ export const handler = (argv: yargs.Arguments<IRawArgs>): void => {
   );
 };
 
-interface IRawArgs {
+interface RawArgs {
   out: string;
   size?: string;
   type?: string;
 }
 
-export interface ICreateOptions {
+export interface CreateOptions {
   outPath: string;
   sizeInBytes: number;
 }
@@ -64,7 +64,7 @@ export interface ICreateOptions {
 /**
  * Parses the arguments specific to the 'create' command. Exposed mainly for unit tests.
  */
-export function parseArgs(args: string[]): ICreateOptions {
+export function parseArgs(args: string[]): CreateOptions {
   if (args.length === 0 || args[0] !== 'create') {
     args = ['create'].concat(args);
   }
@@ -78,7 +78,7 @@ export function parseArgs(args: string[]): ICreateOptions {
   return resolveOptions(parsedArgs);
 }
 
-function resolveOptions(parsedArgs: yargs.Arguments<IRawArgs>): ICreateOptions {
+function resolveOptions(parsedArgs: yargs.Arguments<RawArgs>): CreateOptions {
   const outPath: string = path.resolve(parsedArgs.out);
   const sizeInBytes: number = parseSize(parsedArgs.size || floppySize);
   return {

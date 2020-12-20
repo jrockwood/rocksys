@@ -1,8 +1,16 @@
 import * as fsExtra from 'fs-extra';
 import * as path from 'path';
 
-export const floppySize = 0x168000;
-const bufferSize = 4096;
+// For a standard IBM formatted double-sided, high-density 3.5" floppy diskette, the following properties apply:
+// - Data is recorded on two sides of the disk
+// - Each side has 80 tracks
+// - Each track has 18 sectors
+// - Each sector holds 512 bytes (0.5 KB)
+const floppySideCount = 2;
+const floppyTracksPerSide = 80;
+const floppySectorsPerTrack = 18;
+export const floppyBytesPerSector = 512;
+export const floppySize = floppySideCount * floppyTracksPerSide * floppySectorsPerTrack * floppyBytesPerSector;
 
 export function toFriendlySize(sizeInBytes: number): string {
   if (sizeInBytes === floppySize) {
@@ -12,6 +20,11 @@ export function toFriendlySize(sizeInBytes: number): string {
   throw new Error('Not implemented yet');
 }
 
+const bufferSize = 4096;
+
+/**
+ * Zeroes out all of the bytes on the disk.
+ */
 export function createBlankDisk(outPath: string, sizeInBytes: number): void {
   // open the destination file
   fsExtra.ensureDirSync(path.dirname(outPath));
@@ -27,11 +40,19 @@ export function createBlankDisk(outPath: string, sizeInBytes: number): void {
   fsExtra.closeSync(writeFd);
 }
 
+/**
+ * Copies a block of data from the source file to a location within the destination file.
+ * @param sourceFilePath Path to the source file.
+ * @param destinationDiskPath Path to the destination file.
+ * @param sourceOffset Offset from the start of {@link sourceFilePath} from which to copy data.
+ * @param maxSourceLength The maximum number of bytes to copy.
+ * @param destinationOffset Offset from the start of {@link destinationDiskPath} to write the copied data.
+ */
 export function copyBlock(
   sourceFilePath: string,
   destinationDiskPath: string,
   sourceOffset?: number,
-  sourceLength?: number,
+  maxSourceLength?: number,
   destinationOffset?: number,
 ): number {
   // open the source and destination files
@@ -44,7 +65,7 @@ export function copyBlock(
     let sourcePos = sourceOffset || 0;
     let destPos = destinationOffset || 0;
     let totalBytesRead = 0;
-    const totalBytesToRead = sourceLength || Number.MAX_SAFE_INTEGER;
+    const totalBytesToRead = maxSourceLength || Number.MAX_SAFE_INTEGER;
     let bytesToRead = Math.min(totalBytesToRead, bufferSize);
 
     while (bytesToRead > 0) {
@@ -91,4 +112,37 @@ function openForRead(file: string): number {
 function openForWrite(file: string): number {
   fsExtra.ensureFileSync(file);
   return fsExtra.openSync(file, 'r+');
+}
+
+/**
+ * Truncates all of the trailing zeros from the file, ensuring that the file contains enough zeros to fill an entire
+ * 16 byte "line".
+ * @param filePath The file to truncate.
+ * @returns The number of bytes that were trimmed.
+ */
+export function trimTrailingZerosAndAlignTo16ByteBoundary(filePath: string): number {
+  // open the contents of the file into the buffer
+  const buffer: Buffer = fsExtra.readFileSync(filePath);
+
+  // find the last non-zero in the buffer, starting from the end and moving to the beginning
+  let lastZeroIndex = buffer.length - 1;
+  while (buffer[lastZeroIndex] === 0) {
+    lastZeroIndex--;
+  }
+
+  // truncate the buffer if needed
+  const truncatedBuffer = buffer.slice(0, lastZeroIndex + 1);
+
+  // pad the last row to end at a 16 byte boundary
+  const bytesInLastRow = truncatedBuffer.length % 16 === 0 ? 16 : truncatedBuffer.length % 16;
+  const paddingLength = 16 - bytesInLastRow;
+  const paddingBuffer = Buffer.alloc(paddingLength);
+  const paddedBuffer = Buffer.concat([truncatedBuffer, paddingBuffer], truncatedBuffer.length + paddingLength);
+
+  // write out the new buffer back to the file
+  if (paddedBuffer.length !== buffer.length) {
+    fsExtra.writeFileSync(filePath, paddedBuffer);
+  }
+
+  return buffer.length - paddedBuffer.length;
 }
