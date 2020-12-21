@@ -9,7 +9,7 @@
 ; The assembled file will get written back to disk at logical sector 1073
 ; (`0x86200`) and can be a maximum of 24KB.
 ;
-; Copyright (c) 2017 Justin Rockwood. All rights reserved.
+; Copyright (c) 2020 Justin Rockwood. All rights reserved.
 ;
 
 ; [BITS 16]               ; Tells the assembler to use 16 bit code
@@ -40,16 +40,16 @@
 
 ; 0x8020
 ; str_banner:
-;     db `RockAsm 0.3 - Rockwood Assembler`, 0
-~52 ~6f ~63 ~6b ~41 ~73 ~6d ~20   ~30 ~2e ~33 ~20 ~2d ~20 ~52 ~6f
+;     db `RockAsm 0.4 - Rockwood Assembler`, 0
+~52 ~6f ~63 ~6b ~41 ~73 ~6d ~20   ~30 ~2e ~34 ~20 ~2d ~20 ~52 ~6f
 ~63 ~6b ~77 ~6f ~6f ~64 ~20 ~41   ~73 ~73 ~65 ~6d ~62 ~6c ~65 ~72
 ~00
 
 ; 0x8041
 ; str_copyright:
-;     db `Copyright (c) 2017 Justin Rockwood. All rights reserved.`, 0
+;     db `Copyright (c) 2020 Justin Rockwood. All rights reserved.`, 0
     ~43 ~6f ~70 ~79 ~72 ~69 ~67   ~68 ~74 ~20 ~28 ~63 ~29 ~20 ~32
-~30 ~31 ~37 ~20 ~4a ~75 ~73 ~74   ~69 ~6e ~20 ~52 ~6f ~63 ~6b ~77
+~30 ~32 ~30 ~20 ~4a ~75 ~73 ~74   ~69 ~6e ~20 ~52 ~6f ~63 ~6b ~77
 ~6f ~6f ~64 ~2e ~20 ~41 ~6c ~6c   ~20 ~72 ~69 ~67 ~68 ~74 ~73 ~20
 ~72 ~65 ~73 ~65 ~72 ~76 ~65 ~64   ~2e ~00
 
