@@ -6,8 +6,8 @@
 ; a line break. Hex codes start with a ~ character so that it will be easier to
 ; parse the rudimentary grammar.
 ;
-; The assembled file will get written back to disk at logical sector 1073
-; (`0x86200`) and can be a maximum of 24KB.
+; The assembled file will get written back to disk at logical sector 2113
+; (`0x108200`) and can be a maximum of 28KB.
 ;
 ; Copyright (c) 2020 Justin Rockwood. All rights reserved.
 ;
@@ -32,8 +32,8 @@
 ~01 ~00     ; current_line: dw 1
 ~ff ~ff     ; read_buffer_pos: dw -1
 ~00 ~a4     ; write_buffer_pos: dw 0xA400
-~61 ~00     ; src_sector_number: dw 97
-~31 ~04     ; dest_sector_number: dw 1073
+~71 ~00     ; src_sector_number: dw 113
+~41 ~08     ; dest_sector_number: dw 2113
 
 ; times 0x20 - ($ - $$) db 0
                             ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
