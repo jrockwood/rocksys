@@ -110,9 +110,6 @@ function resolveOptions(parsedArgs: yargs.Arguments<RawArgs>): CompileOsOptions 
     assemblerBinFile: paths.assemblerBin,
     assemblerVersion: paths.assemblerVersion.toString(),
 
-    previousVersionBootloadBinFile: paths.previousOsBootloadBin,
-    previousVersionKernelBinFile: paths.previousOsKernelBin,
-
     bootloadSourceFile,
     kernelSourceFile,
     kernelUnitTestSourceFile,

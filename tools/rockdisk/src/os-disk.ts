@@ -136,12 +136,6 @@ export interface CompileOsOptions {
   /** The version of the assembler being used to compile. */
   assemblerVersion: string;
 
-  /** The previous version bootload.bin file (needed to compile the current bootload). */
-  previousVersionBootloadBinFile: string;
-
-  /** The previous version kernel.bin file (needed to compile the current kernel). */
-  previousVersionKernelBinFile: string;
-
   bootloadSourceFile: string;
   kernelSourceFile: string;
   kernelUnitTestSourceFile: string;
@@ -165,8 +159,8 @@ export async function compileOs(options: CompileOsOptions, prompter: Prompter = 
   prompter.report(`Compiling the bootloader using RockAsm ${options.assemblerVersion}...`);
   createBootableOsFloppy({
     destinationFloppyImage: options.destinationFloppyImage,
-    bootloadBinFile: options.previousVersionBootloadBinFile,
-    kernelBinFile: options.previousVersionKernelBinFile,
+    bootloadBinFile: options.bootloadBinDestinationFile,
+    kernelBinFile: options.kernelBinDestinationFile,
     assemblerBinFile: options.assemblerBinFile,
     sourceFileToCompile: options.bootloadSourceFile,
     sectorMap,
@@ -192,7 +186,7 @@ export async function compileOs(options: CompileOsOptions, prompter: Prompter = 
   createBootableOsFloppy({
     destinationFloppyImage: options.destinationFloppyImage,
     bootloadBinFile: options.bootloadBinDestinationFile,
-    kernelBinFile: options.previousVersionKernelBinFile,
+    kernelBinFile: options.kernelBinDestinationFile,
     assemblerBinFile: options.assemblerBinFile,
     sourceFileToCompile: options.kernelSourceFile,
     sectorMap,

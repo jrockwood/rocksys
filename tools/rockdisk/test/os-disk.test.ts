@@ -188,9 +188,6 @@ describe('OsDisk', () => {
         assemblerBinFile: 'assembler/v0.3/assembler.bin',
         assemblerVersion: 'v0.3',
 
-        previousVersionBootloadBinFile: 'os/v0.5/bootload.bin',
-        previousVersionKernelBinFile: 'os/v0.5/kernel.bin',
-
         bootloadSourceFile: 'os/v0.6/bootload.rasm',
         kernelSourceFile: 'os/v0.6/kernel.rasm',
         kernelUnitTestSourceFile: 'os/v0.6/kernel_test.rasm',
@@ -210,13 +207,12 @@ describe('OsDisk', () => {
           },
         },
         os: {
-          'v0.5': {
-            'bootload.bin': 'bootload.bin',
-            'kernel.bin': 'kernel.bin',
-          },
           'v0.6': {
+            'bootload.bin': 'bootload.bin',
             'bootload.rasm': 'bootload.rasm',
+            'kernel.bin': 'kernel.bin',
             'kernel.rasm': 'kernel.rasm',
+            'kernel_test.bin': 'kernel_test.bin',
             'kernel_test.rasm': 'kernel_test.rasm',
           },
         },

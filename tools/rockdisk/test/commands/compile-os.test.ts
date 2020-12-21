@@ -39,9 +39,6 @@ describe('compile-os CLI command', () => {
       expect(actual.destinationFloppyImage).toBe(path.join(cwd, 'floppy.vfd'));
       expect(actual.assemblerBinFile).toBe(path.join(cwd, 'src', 'rockasm', 'v0.3', 'rockasm.bin'));
 
-      expect(actual.previousVersionBootloadBinFile).toBe(path.join(cwd, 'src', 'rockos', 'v0.6', 'bootload.bin'));
-      expect(actual.previousVersionKernelBinFile).toBe(path.join(cwd, 'src', 'rockos', 'v0.6', 'kernel.bin'));
-
       expect(actual.bootloadBinDestinationFile).toBe(path.join(cwd, 'src', 'rockos', 'v0.7', 'bootload.bin'));
       expect(actual.bootloadSourceFile).toBe(path.join(cwd, 'src', 'rockos', 'v0.7', 'bootload.rasm'));
 

@@ -2,14 +2,14 @@
   "bootSector": 0,
 
   "kernelSector": 1,
-  "kernelSizeInSectors": 48,
+  "kernelSizeInSectors": 56,
 
-  "assemblerSector": 49,
-  "assembledFileSizeInSectors": 48,
+  "assemblerSector": 57,
+  "assemblerSizeInSectors": 56,
 
-  "sourceFileSector": 97,
-  "sourceFileSizeInSectors": 976,
+  "sourceFileSector": 113,
+  "sourceFileSizeInSectors": 2000,
 
-  "assembledFileSector": 1073,
-  "assemblerSizeInSectors": 48
+  "assembledFileSector": 2113,
+  "assembledFileSizeInSectors": 56
 }
