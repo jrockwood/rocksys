@@ -1,7 +1,7 @@
 import * as colors from 'colors';
 import * as path from 'path';
 import * as yargs from 'yargs';
-import { copyBlock } from '../disk';
+import { copyBlock, trimTrailingZerosAndAlignTo16ByteBoundary } from '../disk';
 import { parseSize } from '../utility';
 
 const epilog =
@@ -46,19 +46,29 @@ export const builder = (argv: yargs.Argv): yargs.Argv<RawArgs> => {
       requiresArg: true,
       type: 'string',
     })
+    .option('trim', {
+      describe: 'Trims the trailing zeroes at a 16-byte boundary',
+      type: 'boolean',
+    })
     .strict()
     .epilog(epilog);
 };
 
 export const handler = (argv: yargs.Arguments<RawArgs>): void => {
   const options: CopyOptions = resolveOptions(argv);
-  const bytesWritten = copyBlock(
+  let bytesWritten = copyBlock(
     options.sourceFile,
     options.destinationFile,
     options.sourceOffset,
     options.sourceLength,
     options.destinationOffset,
   );
+
+  if (options.shouldTrim) {
+    const trimmedByteCount = trimTrailingZerosAndAlignTo16ByteBoundary(options.destinationFile);
+    bytesWritten -= trimmedByteCount;
+  }
+
   console.log(colors.green(`Wrote ${bytesWritten} bytes to ${options.destinationFile}`));
 };
 
@@ -68,6 +78,7 @@ interface RawArgs {
   soff?: string;
   slen?: string;
   doff?: string;
+  trim?: boolean;
 }
 
 export interface CopyOptions {
@@ -76,6 +87,7 @@ export interface CopyOptions {
   sourceOffset: number;
   sourceLength?: number;
   destinationOffset: number;
+  shouldTrim: boolean;
 }
 
 /**
@@ -101,11 +113,13 @@ function resolveOptions(parsedArgs: yargs.Arguments<RawArgs>): CopyOptions {
   const sourceOffset: number = parseSize(parsedArgs.soff || 0);
   const sourceLength: number | undefined = parsedArgs.slen ? parseSize(parsedArgs.slen) : undefined;
   const destinationOffset: number = parseSize(parsedArgs.doff || 0);
+  const shouldTrim: boolean = parsedArgs.trim || false;
   return {
     sourceFile,
     destinationFile,
     sourceOffset,
     sourceLength,
     destinationOffset,
+    shouldTrim,
   };
 }
