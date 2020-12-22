@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@types/fs-extra": "9.0.5",
+    "@types/inquirer": "7.3.1",
     "@types/jasmine": "3.6.2",
     "@types/mock-fs": "4.13.0",
     "@types/node": "14.14.12",
@@ -36,6 +37,7 @@
   "dependencies": {
     "colors": "1.4.0",
     "fs-extra": "9.0.1",
+    "inquirer": "7.3.3",
     "yargs": "16.2.0"
   }
 }
