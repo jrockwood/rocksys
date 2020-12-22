@@ -2,7 +2,7 @@ import * as colors from 'colors';
 import * as path from 'path';
 import * as yargs from 'yargs';
 import { compileOs, CompileOsOptions, defaultOsFloppySectorMap } from '../os-disk';
-import { parseSectorMapArg, resolveAsmAndOsPaths } from './parse-args';
+import { parseSectorMapArg, resolveAsmAndOsPaths } from '../parse-args';
 
 const epilog =
   'Assumes that there is a source directory with the following format:\n' +

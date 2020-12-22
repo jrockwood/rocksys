@@ -1,6 +1,6 @@
 import * as fsExtra from 'fs-extra';
 import * as path from 'path';
-import { defaultOsFloppySectorMap, OsFloppySectorMap } from '../os-disk';
+import { defaultOsFloppySectorMap, OsFloppySectorMap } from './os-disk';
 
 /**
  * Represents a major.minor version.
