@@ -41,19 +41,10 @@ export interface AsmAndOsPaths {
   readonly assemblerDir: string;
   readonly assemblerBin: string;
 
-  readonly previousAssemblerVersion: VersionInfo;
-  readonly previousAssemblerDir: string;
-  readonly previousAssemblerBin: string;
-
   readonly osVersion: VersionInfo;
   readonly osDir: string;
   readonly osBootloadBin: string;
   readonly osKernelBin: string;
-
-  readonly previousOsVersion: VersionInfo;
-  readonly previousOsDir: string;
-  readonly previousOsBootloadBin: string;
-  readonly previousOsKernelBin: string;
 }
 
 export function resolveAsmAndOsPaths(
@@ -65,52 +56,24 @@ export function resolveAsmAndOsPaths(
   const assemblerVersion = VersionInfo.parse(assemblerVersionString);
   const osVersion = VersionInfo.parse(osVersionString);
 
-  if (assemblerVersion.minor === 0) {
-    throw new Error(
-      `Cannot determine the previous version of the assembler using version '${assemblerVersionString}'.`,
-    );
-  }
-
-  if (osVersion.minor === 0) {
-    throw new Error(`Cannot determine the previous version of the OS using version '${osVersionString}'.`);
-  }
-
-  const previousAssemblerVersion = new VersionInfo(assemblerVersion.major, assemblerVersion.minor - 1);
-  const previousOsVersion = new VersionInfo(osVersion.major, osVersion.minor - 1);
-
   // construct the paths to the assembler files
   const assemblerDir = path.resolve(srcDir, 'rockasm', assemblerVersion.toString());
   const assemblerBin = path.join(assemblerDir, 'rockasm.bin');
-  const previousAssemblerDir = path.resolve(srcDir, 'rockasm', previousAssemblerVersion.toString());
-  const previousAssemblerBin = path.join(previousAssemblerDir, 'rockasm.bin');
 
   // construct the paths to the OS files
   const osDir = path.resolve(srcDir, 'rockos', osVersion.toString());
   const osBootloadBin = path.join(osDir, 'bootload.bin');
   const osKernelBin = path.join(osDir, 'kernel.bin');
 
-  const previousOsDir = path.resolve(srcDir, 'rockos', previousOsVersion.toString());
-  const previousOsBootloadBin = path.join(previousOsDir, 'bootload.bin');
-  const previousOsKernelBin = path.join(previousOsDir, 'kernel.bin');
-
   return {
     assemblerVersion,
     assemblerDir,
     assemblerBin,
 
-    previousAssemblerVersion,
-    previousAssemblerDir,
-    previousAssemblerBin,
-
     osVersion,
     osDir,
     osBootloadBin,
     osKernelBin,
-
-    previousOsVersion,
-    previousOsDir,
-    previousOsBootloadBin,
-    previousOsKernelBin,
   };
 }
 
