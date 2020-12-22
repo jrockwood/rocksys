@@ -97,3 +97,9 @@ hexPairs:
 hexPair:
   '~' '[0-9a-f]' '[0-9a-f]'
 ```
+
+## Version 0.4
+
+This is the same as version 0.3 except it writes out the assembled file to disk
+at logical sector 2113 (`0x108200`) and can be a maximum of 28KB. This
+corresponds to the new OS v0.7 disk sector layout and memory map.

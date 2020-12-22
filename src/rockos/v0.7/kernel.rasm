@@ -116,7 +116,7 @@
 ~ff ~d0     ; call ax
 
     ; --------------------------------------------------------------------------
-    ; Load the program code from the 57th sector to address 0x2000:7000 and then
+    ; Load the program code from the 58th sector to address 0x2000:7000 and then
     ; start executing it. Load 28K worth of program binary code.
 
 ~68 ~00 ~70 ; push 0x7000         ; dest_address = 0x2000:7000
@@ -125,8 +125,17 @@
 ~b8 ~21 ~00 ; mov ax, os_read_sectors
 ~ff ~d0     ; call ax
 ~83 ~c4 ~06 ; add sp, 6
-~bb ~00 ~70 ; mov bx, 0x7000
-~ff ~d3     ; call bx
+
+~6a ~04     ; push byte 4         ; line_count
+~68 ~00 ~70 ; push 0x7000         ; address
+~b8 ~1e ~00 ; mov ax, os_print_memory
+~ff ~d0     ; call ax
+~83 ~c4 ~06 ; add sp, 6
+~fa         ; cli
+~f4         ; hlt
+
+; ~bb ~00 ~70 ; mov bx, 0x7000
+; ~ff ~d3     ; call bx
 
     ; --------------------------------------------------------------------------
     ; We're done

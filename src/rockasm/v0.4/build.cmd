@@ -1,22 +1,21 @@
 @echo off
+setlocal
 
 pushd .
 cd "%~dp0..\..\.."
 
-echo Creating a blank floppy disk image...
-node tools\rockdisk\bin\rockdisk create --out disks\rockos.vfd --type floppy
+echo Building RockAsm v0.4
+echo =====================
+echo.
+node tools\rockdisk\bin\rockdisk create-os-floppy --destVfd disks\rockos.vfd --srcDir src --asmVersion v0.4 --osVersion v0.7 --sectorMap src\rockos\v0.7\sectorMap.json
 
-echo Copying the bootloader to the floppy disk image...
-node tools\rockdisk\bin\rockdisk copy --src src\rockos\v0.6\bootload.bin --dest disks\rockos.vfd --doff 0
+echo Now run the rockos.vfd in a virtual machine to compile the rockasm.rasm file.
+pause
 
-echo Copying the kernel to the floppy disk image...
-node tools\rockdisk\bin\rockdisk copy --src src\rockos\v0.6\kernel.bin --dest disks\rockos.vfd --doff 200h
+echo Copying the assembled file from the floppy disk image...
+node tools\rockdisk\bin\rockdisk copy --src disks\rockos.vfd --dest "%~dp0rockasm.bin" --soff 108200h --slen 7000h --trim
 
-echo Copying the assembler to the floppy disk image...
-node tools\rockdisk\bin\rockdisk copy --src "%~dp0rockasm.bin" --dest disks\rockos.vfd --doff 6200h
-
-echo Copying the source file to the floppy disk image...
-node tools\rockdisk\bin\rockdisk copy --src "%~dp0rockasm.rasm" --dest disks\rockos.vfd --doff C200h
+echo Done!
 
 popd
-echo Done
+endlocal
