@@ -24,6 +24,15 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Interactive",
+      "program": "${workspaceRoot}/tools/rockdisk/bin/rockdisk",
+      "args": ["interactive"],
+      "sourceMaps": true,
+      "outFiles": ["tools/rockdisk/lib/**/*.js"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Unit Tests",
       "program": "${workspaceRoot}/tools/rockdisk/node_modules/jasmine/bin/jasmine.js",
       "args": ["lib/test/**/*.js"],
