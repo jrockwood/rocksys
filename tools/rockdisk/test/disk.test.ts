@@ -3,12 +3,37 @@ import mock = require('mock-fs');
 import {
   copyBlock,
   createBlankDisk,
+  DiskSectorRange,
   floppySize,
   toFriendlySize,
   trimTrailingZerosAndAlignTo16ByteBoundary,
 } from '../src/disk';
 
 describe('Disk', () => {
+  describe('DiskSectorRange', () => {
+    it('should store the ctor arguments', () => {
+      const sectorRange = new DiskSectorRange(1, 2, 3);
+      expect(sectorRange.startSector).toBe(1);
+      expect(sectorRange.sectorCount).toBe(2);
+      expect(sectorRange.bytesPerSector).toBe(3);
+    });
+
+    it('should calculate the startAddress', () => {
+      const sectorRange = new DiskSectorRange(4, 4, 10);
+      expect(sectorRange.startAddress).toBe(40);
+    });
+
+    it('should calculate the endSector', () => {
+      const sectorRange = new DiskSectorRange(0, 4, 10);
+      expect(sectorRange.endSector).toBe(3);
+    });
+
+    it('should calculate the totalBytes', () => {
+      const sectorRange = new DiskSectorRange(0, 4, 10);
+      expect(sectorRange.totalBytes).toBe(40);
+    });
+  });
+
   describe('toFriendlySize()', () => {
     it('should return the correct size for a floppy disk', () => {
       expect(toFriendlySize(floppySize)).toBe('1.44 MB');

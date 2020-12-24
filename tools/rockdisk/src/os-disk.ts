@@ -3,27 +3,12 @@ import * as path from 'path';
 import {
   copyBlock,
   createBlankDisk,
-  floppyBytesPerSector,
+  DiskSectorRange,
+  FloppyDiskSectorRange,
   floppySize,
   trimTrailingZerosAndAlignTo16ByteBoundary,
 } from './disk';
 import { DefaultPrompter, Prompter } from './prompter';
-
-export interface OsFloppySectorMap {
-  readonly bootSector: number;
-
-  readonly kernelSector: number;
-  readonly kernelSizeInSectors: number;
-
-  readonly assemblerSector: number;
-  readonly assemblerSizeInSectors: number;
-
-  readonly sourceFileSector: number;
-  readonly sourceFileSizeInSectors: number;
-
-  readonly assembledFileSector: number;
-  readonly assembledFileSizeInSectors: number;
-}
 
 export const sectorsFor28K = 56;
 export const sectorsFor1MB = 2000;
@@ -40,20 +25,32 @@ export const sectorsFor1MB = 2000;
  * | 113-2112        | `0x00E200-0x1081FF` | Source File (1MB, 2000 sectors) |
  * | 2113-2168       | `0x108200-0x10F1FF` | Assembled File (written) (28K)  |
  */
-export const defaultOsFloppySectorMap: OsFloppySectorMap = {
-  bootSector: 0,
-  kernelSector: 1,
-  kernelSizeInSectors: sectorsFor28K,
+export class OsFloppySectorMap {
+  public readonly bootSector: FloppyDiskSectorRange;
+  public readonly kernelSector: FloppyDiskSectorRange;
+  public readonly assemblerSector: FloppyDiskSectorRange;
+  public readonly sourceFileSector: FloppyDiskSectorRange;
+  public readonly assembledFileSector: FloppyDiskSectorRange;
 
-  assemblerSector: sectorsFor28K + 1,
-  assembledFileSizeInSectors: sectorsFor28K,
+  public constructor(
+    kernelSector?: FloppyDiskSectorRange,
+    assemblerSector?: FloppyDiskSectorRange,
+    sourceFileSector?: FloppyDiskSectorRange,
+    assembledFileSector?: FloppyDiskSectorRange,
+  ) {
+    this.bootSector = new FloppyDiskSectorRange(0, 1);
+    this.kernelSector = kernelSector || new FloppyDiskSectorRange(1, sectorsFor28K);
+    this.assemblerSector = assemblerSector || new FloppyDiskSectorRange(this.kernelSector.endSector + 1, sectorsFor28K);
 
-  sourceFileSector: sectorsFor28K * 2 + 1,
-  sourceFileSizeInSectors: sectorsFor1MB,
+    this.sourceFileSector =
+      sourceFileSector || new FloppyDiskSectorRange(this.assemblerSector.endSector + 1, sectorsFor1MB);
 
-  assembledFileSector: sectorsFor28K * 2 + sectorsFor1MB + 1,
-  assemblerSizeInSectors: sectorsFor28K,
-};
+    this.assembledFileSector =
+      assembledFileSector || new FloppyDiskSectorRange(this.sourceFileSector.endSector + 1, sectorsFor28K);
+  }
+}
+
+export const defaultOsFloppySectorMap = new OsFloppySectorMap();
 
 export interface BootableOsFloppyOptions {
   /** The destination floppy disk image. */
@@ -72,9 +69,9 @@ export interface BootableOsFloppyOptions {
   sourceFileToCompile: string;
 
   /**
-   * An optional sector map describing where each section of the OS resides on the floppy disk.
+   * A sector map describing where each section of the OS resides on the floppy disk.
    */
-  sectorMap?: OsFloppySectorMap;
+  sectorMap: OsFloppySectorMap;
 }
 
 /**
@@ -89,40 +86,23 @@ export interface BootableOsFloppyOptions {
 export function createBootableOsFloppy(options: BootableOsFloppyOptions): void {
   createBlankDisk(options.destinationFloppyImage, floppySize);
 
-  const sectorMap = options.sectorMap || defaultOsFloppySectorMap;
-
   // copy the parts to the right place on disk
-  copyDiskPart(options.destinationFloppyImage, options.bootloadBinFile, sectorMap.bootSector, 1);
-  copyDiskPart(
-    options.destinationFloppyImage,
-    options.kernelBinFile,
-    sectorMap.kernelSector,
-    sectorMap.kernelSizeInSectors,
-  );
-  copyDiskPart(
-    options.destinationFloppyImage,
-    options.assemblerBinFile,
-    sectorMap.assemblerSector,
-    sectorMap.assemblerSizeInSectors,
-  );
-  copyDiskPart(
-    options.destinationFloppyImage,
-    options.sourceFileToCompile,
-    sectorMap.sourceFileSector,
-    sectorMap.sourceFileSizeInSectors,
-  );
+  copyDiskPart(options.destinationFloppyImage, options.bootloadBinFile, options.sectorMap.bootSector);
+  copyDiskPart(options.destinationFloppyImage, options.kernelBinFile, options.sectorMap.kernelSector);
+  copyDiskPart(options.destinationFloppyImage, options.assemblerBinFile, options.sectorMap.assemblerSector);
+  copyDiskPart(options.destinationFloppyImage, options.sourceFileToCompile, options.sectorMap.sourceFileSector);
 }
 
-function copyDiskPart(destinationFile: string, sourceBinFile: string, sectorStart: number, maxSectors: number): void {
+function copyDiskPart(destinationFile: string, sourceBinFile: string, sectorRange: DiskSectorRange): void {
   // make sure the size of the source binary file is not bigger than the maximum size
-  const maxSize = maxSectors * floppyBytesPerSector;
+  const maxSize = sectorRange.totalBytes;
   const stats = fsExtra.statSync(sourceBinFile);
   if (stats.size > maxSize) {
     throw new Error(`The size of '${sourceBinFile}' exceeds the maximum size of ${maxSize}.`);
   }
 
   // copy the source to the destination
-  const destOffset = sectorStart * floppyBytesPerSector;
+  const destOffset = sectorRange.startAddress;
   copyBlock(sourceBinFile, destinationFile, /*sourceOffset:*/ 0, maxSize, destOffset);
 }
 
@@ -258,8 +238,8 @@ function extractAndTrimCompiledFile(
   destinationBinFile: string,
   sectorMap: OsFloppySectorMap,
 ): void {
-  const compiledFileOffset = sectorMap.assembledFileSector * floppyBytesPerSector;
-  const maxLength = sectorMap.assembledFileSizeInSectors * floppyBytesPerSector;
+  const compiledFileOffset = sectorMap.assembledFileSector.startAddress;
+  const maxLength = sectorMap.assembledFileSector.totalBytes;
   copyBlock(sourceFloppyImage, destinationBinFile, compiledFileOffset, maxLength);
   trimTrailingZerosAndAlignTo16ByteBoundary(destinationBinFile);
 }

@@ -12,6 +12,36 @@ const floppySectorsPerTrack = 18;
 export const floppyBytesPerSector = 512;
 export const floppySize = floppySideCount * floppyTracksPerSide * floppySectorsPerTrack * floppyBytesPerSector;
 
+export class DiskSectorRange {
+  public readonly startSector: number;
+  public readonly sectorCount: number;
+  public readonly bytesPerSector: number;
+
+  public get endSector(): number {
+    return this.startSector + this.sectorCount - 1;
+  }
+
+  public get startAddress(): number {
+    return this.startSector * this.bytesPerSector;
+  }
+
+  public get totalBytes(): number {
+    return this.sectorCount * this.bytesPerSector;
+  }
+
+  public constructor(startSector: number, sectorCount: number, bytesPerSector: number) {
+    this.startSector = startSector;
+    this.sectorCount = sectorCount;
+    this.bytesPerSector = bytesPerSector;
+  }
+}
+
+export class FloppyDiskSectorRange extends DiskSectorRange {
+  public constructor(startSector: number, sectorCount: number) {
+    super(startSector, sectorCount, floppyBytesPerSector);
+  }
+}
+
 export function toFriendlySize(sizeInBytes: number): string {
   if (sizeInBytes === floppySize) {
     return '1.44 MB';

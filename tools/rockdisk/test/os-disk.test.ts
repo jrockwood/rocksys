@@ -1,6 +1,6 @@
 import * as fsExtra from 'fs-extra';
 import mock = require('mock-fs');
-import { copyBlock, floppyBytesPerSector, floppySize } from '../src/disk';
+import { copyBlock, floppyBytesPerSector, FloppyDiskSectorRange, floppySize } from '../src/disk';
 import { compileOs, createBootableOsFloppy, defaultOsFloppySectorMap, CompileOsOptions } from '../src/os-disk';
 import { VirtualPrompter } from '../src/prompter';
 
@@ -43,14 +43,14 @@ describe('OsDisk', () => {
       buffer.writeUInt8(4, 515);
 
       // assembler
-      const assemblerOffset = defaultOsFloppySectorMap.assemblerSector * floppyBytesPerSector;
+      const assemblerOffset = defaultOsFloppySectorMap.assemblerSector.startAddress;
       buffer.writeUInt8(5, assemblerOffset);
       buffer.writeUInt8(6, assemblerOffset + 1);
       buffer.writeUInt8(7, assemblerOffset + 2);
       buffer.writeUInt8(8, assemblerOffset + 3);
 
       // source file
-      buffer.write(sourceFileContents, defaultOsFloppySectorMap.sourceFileSector * floppyBytesPerSector, 'ascii');
+      buffer.write(sourceFileContents, defaultOsFloppySectorMap.sourceFileSector.startAddress, 'ascii');
 
       return buffer;
     }
@@ -62,6 +62,7 @@ describe('OsDisk', () => {
         kernelBinFile,
         assemblerBinFile,
         sourceFileToCompile,
+        sectorMap: defaultOsFloppySectorMap,
       });
       expect(fsExtra.existsSync(destinationFloppyImage)).toBe(true);
 
@@ -108,9 +109,7 @@ describe('OsDisk', () => {
     it('should throw if the contents of the kernel section are greater than the allocated space', () => {
       mock({
         [bootloadBinFile]: Buffer.from(bootloadBinContents),
-        [kernelBinFile]: Buffer.from(
-          new Array(defaultOsFloppySectorMap.kernelSizeInSectors * floppyBytesPerSector + 1),
-        ),
+        [kernelBinFile]: Buffer.from(new Array(defaultOsFloppySectorMap.kernelSector.totalBytes + 1)),
         [assemblerBinFile]: Buffer.from(assemblerBinContents),
         [sourceFileToCompile]: sourceFileContents,
       });
@@ -132,9 +131,7 @@ describe('OsDisk', () => {
       mock({
         [bootloadBinFile]: Buffer.from(bootloadBinContents),
         [kernelBinFile]: Buffer.from(kernelBinContents),
-        [assemblerBinFile]: Buffer.from(
-          new Array(defaultOsFloppySectorMap.assembledFileSizeInSectors * floppyBytesPerSector + 1),
-        ),
+        [assemblerBinFile]: Buffer.from(new Array(defaultOsFloppySectorMap.assembledFileSector.totalBytes + 1)),
         [sourceFileToCompile]: sourceFileContents,
       });
 
@@ -156,11 +153,7 @@ describe('OsDisk', () => {
         [bootloadBinFile]: Buffer.from(bootloadBinContents),
         [kernelBinFile]: Buffer.from(kernelBinContents),
         [assemblerBinFile]: Buffer.from(assemblerBinContents),
-        [sourceFileToCompile]: Buffer.alloc(
-          defaultOsFloppySectorMap.sourceFileSizeInSectors * floppyBytesPerSector + 1,
-          'a',
-          'ascii',
-        ),
+        [sourceFileToCompile]: Buffer.alloc(defaultOsFloppySectorMap.sourceFileSector.totalBytes + 1, 'a', 'ascii'),
       });
 
       const action = () =>
@@ -234,15 +227,11 @@ describe('OsDisk', () => {
 
     it('should have all of the proper segments on the floppy disk', async () => {
       options.sectorMap = {
-        bootSector: 0,
-        kernelSector: 1,
-        kernelSizeInSectors: 1,
-        assemblerSector: 2,
-        assemblerSizeInSectors: 1,
-        sourceFileSector: 3,
-        sourceFileSizeInSectors: 1,
-        assembledFileSector: 4,
-        assembledFileSizeInSectors: 1,
+        bootSector: new FloppyDiskSectorRange(0, 1),
+        kernelSector: new FloppyDiskSectorRange(1, 1),
+        assemblerSector: new FloppyDiskSectorRange(2, 1),
+        sourceFileSector: new FloppyDiskSectorRange(3, 1),
+        assembledFileSector: new FloppyDiskSectorRange(4, 1),
       };
       const sector1Offset = 1 * floppyBytesPerSector;
       const sector2Offset = 2 * floppyBytesPerSector;

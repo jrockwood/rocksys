@@ -1,6 +1,7 @@
 import mock = require('mock-fs');
 import * as path from 'path';
 import { parseArgs } from '../../src/commands/compile-os';
+import { FloppyDiskSectorRange } from '../../src/disk';
 import { OsFloppySectorMap } from '../../src/os-disk';
 
 describe('compile-os CLI command', () => {
@@ -51,18 +52,11 @@ describe('compile-os CLI command', () => {
 
     it('should parse the sectorMap json file', () => {
       const sectorMap: OsFloppySectorMap = {
-        bootSector: 0,
-        kernelSector: 1,
-        kernelSizeInSectors: 1,
-
-        assemblerSector: 2,
-        assembledFileSizeInSectors: 2,
-
-        sourceFileSector: 3,
-        sourceFileSizeInSectors: 3,
-
-        assembledFileSector: 4,
-        assemblerSizeInSectors: 4,
+        bootSector: new FloppyDiskSectorRange(0, 1),
+        kernelSector: new FloppyDiskSectorRange(1, 1),
+        assemblerSector: new FloppyDiskSectorRange(2, 2),
+        sourceFileSector: new FloppyDiskSectorRange(3, 3),
+        assembledFileSector: new FloppyDiskSectorRange(4, 4),
       };
       mock({
         'sectorMap.json': JSON.stringify(sectorMap, undefined, '  '),
@@ -82,7 +76,7 @@ describe('compile-os CLI command', () => {
       ];
       const actual = parseArgs(args);
 
-      expect(actual.sectorMap).toEqual(sectorMap);
+      expect(JSON.stringify(actual.sectorMap)).toEqual(JSON.stringify(sectorMap));
     });
   });
 });
