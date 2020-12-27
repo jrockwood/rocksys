@@ -116,7 +116,7 @@
 ~ff ~d0     ; call ax
 
     ; --------------------------------------------------------------------------
-    ; Load the program code from the 57th sector to address 0x2000:8000 and then
+    ; Load the program code from the 57th sector to address 0x2000:7000 and then
     ; start executing it. Load 28K worth of program binary code.
 
 ~68 ~00 ~70 ; push 0x7000         ; dest_address = 0x2000:7000
@@ -161,7 +161,8 @@
 ;   Prints a string to the console.
 ;
 ;   Input
-;     str - null terminated string to print
+;     str - null terminated string to print (DS segment)
+;     DS  - points to the source segment for `str`
 ;
 ;   Returns
 ;     Nothing
@@ -795,6 +796,8 @@
 ;     number - number to convert
 ;     format - see the note below for formats
 ;     buffer - memory address containing space for at least 7 characters
+;              (ES segment)
+;     ES     - segment that `buffer` resides in
 ;   Returns
 ;     AX - 1 if successful, 0 if the format is invalid.
 ;
@@ -926,8 +929,9 @@
 ;   Converts a string into an integer.
 ;
 ;   Input
-;     string - address of a null-terminated string to convert
+;     string - address of a null-terminated string to convert (DS segment)
 ;     format - see the note below for formats
+;     DS     - source segment for `string`
 ;   Returns
 ;     AX - the converted number
 ;     DX - 1 if successful, 0 if the format is invalid.
