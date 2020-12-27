@@ -85,13 +85,13 @@
 ~e8 ~20 ~00 ; call print_string
 
     ; --------------------------------------------------------------------------
-    ; Load 12KB of kernel executable code (24 sectors) from the second sector
+    ; Load 28KB of kernel executable code (56 sectors) from the second sector
     ; into memory address 0x2000:0000 and then start executing it.
 
 ~b8 ~00 ~20 ; mov ax, 0x2000
 ~8e ~c0     ; mov es, ax          ; copy to address 0x2000:0000 (ES:BX)
 ~6a ~00     ; push byte 0         ; dest_address = 0x2000:0000
-~6a ~18     ; push byte 24        ; sector_count
+~6a ~38     ; push byte 56        ; sector_count
 ~6a ~01     ; push byte 1         ; sector_number (0-based)
 ~e8 ~22 ~00 ; call read_sectors
 ~83 ~c4 ~06 ; add sp, 6
