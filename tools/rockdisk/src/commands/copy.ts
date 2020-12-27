@@ -1,7 +1,7 @@
 import * as colors from 'colors';
 import * as path from 'path';
 import * as yargs from 'yargs';
-import { copyBlock } from '../disk';
+import { copyBlock, trimTrailingZerosAndAlignTo16ByteBoundary } from '../disk';
 import { parseSize } from '../utility';
 
 const epilog =
@@ -46,6 +46,11 @@ export const builder = (argv: yargs.Argv): yargs.Argv<RawArgs> => {
       requiresArg: true,
       type: 'string',
     })
+    .option('trim', {
+      describe: 'Trims the trailing zeros from output file and aligns at a 16-byte boundary',
+      type: 'boolean',
+      default: false,
+    })
     .strict()
     .epilog(epilog);
 };
@@ -59,7 +64,13 @@ export const handler = (argv: yargs.Arguments<RawArgs>): void => {
     options.sourceLength,
     options.destinationOffset,
   );
-  console.log(colors.green(`Wrote ${bytesWritten} bytes to ${options.destinationFile}`));
+
+  if (argv.trim) {
+    const trimmedBytes = trimTrailingZerosAndAlignTo16ByteBoundary(options.destinationFile);
+    console.log(colors.green(`Wrote ${bytesWritten - trimmedBytes} bytes (trimmed) to ${options.destinationFile}`));
+  } else {
+    console.log(colors.green(`Wrote ${bytesWritten} bytes to ${options.destinationFile}`));
+  }
 };
 
 interface RawArgs {
@@ -68,6 +79,7 @@ interface RawArgs {
   soff?: string;
   slen?: string;
   doff?: string;
+  trim: boolean;
 }
 
 export interface CopyOptions {
