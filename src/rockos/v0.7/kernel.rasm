@@ -78,7 +78,7 @@
 ; End the data section at the 256th byte (0x100)
 ; times 0x100 - ($ - $$) db 0
 
-                                                      ~00 ~00 ~00
+                                                          ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -116,12 +116,12 @@
 ~ff ~d0     ; call ax
 
     ; --------------------------------------------------------------------------
-    ; Load the program code from the 50th sector to address 0x2000:8000 and then
-    ; start executing it. Load 24K worth of program binary code.
+    ; Load the program code from the 57th sector to address 0x2000:8000 and then
+    ; start executing it. Load 28K worth of program binary code.
 
 ~68 ~00 ~80 ; push 0x8000         ; dest_address = 0x2000:8000
-~6a ~30     ; push byte 48        ; sector_count
-~6a ~31     ; push byte 49        ; sector_number
+~6a ~38     ; push byte 56        ; sector_count
+~6a ~39     ; push byte 57        ; sector_number
 ~b8 ~21 ~00 ; mov ax, os_read_sectors
 ~ff ~d0     ; call ax
 ~83 ~c4 ~06 ; add sp, 6
@@ -1056,7 +1056,7 @@
 ;   * '0X' - hexidecimal number with prefix and upper-case letters
 ; ------------------------------------------------------------------------------
 
-os_print_int:
+; os_print_int:
 ~55             ; push bp
 ~89 ~e5         ; mov bp, sp
 ~83 ~ec ~08     ; sub sp, 8               ; char[8] buffer
