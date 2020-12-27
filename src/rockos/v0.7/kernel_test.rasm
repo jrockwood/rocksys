@@ -5,18 +5,18 @@
 ;
 
 ; [BITS 16]               ; Tells the assembler to use 16 bit code
-; [ORG 0x8000]            ; The kernel will load us into this address
+; [ORG 0x7000]            ; The kernel will load us into this address
 
 ; %include "syscalls.inc"
 
-start:
+; start:
 ~e9 ~fd ~01 ; jmp main
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Data Section
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; 0x8003
+; 0x7003
 
             ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -25,7 +25,7 @@ start:
 
 ; times 0x40 - ($ - $$) db 0
 
-; 0x8040
+; 0x7040
 ; str_banner:
 ;     db 'Kernel unit tests', 0
 ~4b ~65 ~72 ~6e ~65 ~6c ~20 ~75   ~6e ~69 ~74 ~20 ~74 ~65 ~73 ~74
@@ -97,16 +97,16 @@ start:
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8200
+; 0x7200
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-main:
+; main:
     ; --------------------------------------------------------------------------
     ; Display the banner
 
-~68 ~40 ~80     ; push str_banner
+~68 ~40 ~70     ; push str_banner
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
@@ -116,10 +116,10 @@ main:
     ; --------------------------------------------------------------------------
     ; Run the tests
 
-~b8 ~80 ~82     ; mov ax, run_tests
+~b8 ~80 ~72     ; mov ax, run_tests
 ~ff ~d0         ; call ax
 
-mainExit:
+; mainExit:
 ~c3             ; ret
 
 ; times 0x240 - ($ - $$) db 0
@@ -127,7 +127,7 @@ mainExit:
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8240
+; 0x7240
 ; ------------------------------------------------------------------------------
 ; print_test_number(test_number, passed)
 ;   Prints the message: "    Test {0}: Passed" or "    Test {0}: Failed".
@@ -144,7 +144,7 @@ mainExit:
 ~89 ~e5         ; mov bp, sp
 
     ; print the prefix
-~68 ~6f ~80     ; push str_test_number
+~68 ~6f ~70     ; push str_test_number
 ~b8 ~03 ~00     ; mov ax, os_print_string
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
@@ -159,10 +159,10 @@ mainExit:
     ; print suffix
 ~83 ~7e ~06 ~00 ; cmp word [bp + 6], 0
 ~74 ~05         ; je .print_failed
-~68 ~79 ~80     ; push str_passed
+~68 ~79 ~70     ; push str_passed
 ~eb ~03         ; jmp .print_suffix
 ; .print_failed:
-~68 ~82 ~80     ; push str_failed
+~68 ~82 ~70     ; push str_failed
 ; .print_suffix:
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
@@ -176,7 +176,7 @@ mainExit:
 ; times 0x280 - ($ - $$) db 0
                     ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8280
+; 0x7280
 ; ------------------------------------------------------------------------------
 ; run_tests()
 ;   Runs the unit tests.
@@ -187,7 +187,7 @@ mainExit:
 ;     Nothing
 ; ------------------------------------------------------------------------------
 
-run_tests:
+; run_tests:
 ~55             ; push bp
 ~89 ~e5         ; mov bp, sp
 ~83 ~ec ~04     ; sub sp, 4               ; int pass_count, int fail_count
@@ -195,7 +195,7 @@ run_tests:
 ~c7 ~46 ~fe ~00 ~00 ; mov word [bp - 2], 0    ; pass_count = 0
 ~c7 ~46 ~fc ~00 ~00 ; mov word [bp - 4], 0    ; fail_count = 0
 
-~68 ~52 ~80     ; push str_running
+~68 ~52 ~70     ; push str_running
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
@@ -208,7 +208,7 @@ run_tests:
 ~50             ; push ax     ; fail_count = &fail_count
 ~83 ~c0 ~02     ; add ax, 2
 ~50             ; push ax     ; pass_count = &pass_count
-~b8 ~50 ~84     ; mov ax, test_os_print_int
+~b8 ~50 ~74     ; mov ax, test_os_print_int
 ~ff ~d0         ; call ax
 ~83 ~c4 ~04     ; add sp, 4
 
@@ -220,7 +220,7 @@ run_tests:
 ~8b ~46 ~fc     ; mov ax, [bp - 4]      ; AX = fail_count
 ~83 ~f8 ~00     ; cmp ax, 0
 ~75 ~14         ; jne .some_failures
-~68 ~5d ~80     ; push str_all_tests_passed
+~68 ~5d ~70     ; push str_all_tests_passed
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
@@ -230,9 +230,9 @@ run_tests:
 ~5d             ; pop bp
 ~c3             ; ret
 
-.some_failures:
+;.some_failures:
     ; print "Done: x passes, y failures"
-~68 ~8b ~80     ; push str_done
+~68 ~8b ~70     ; push str_done
 ~b8 ~03 ~00     ; mov ax, os_print_string
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
@@ -243,7 +243,7 @@ run_tests:
 ~ff ~d0         ; call ax
 ~83 ~c4 ~04     ; add sp, 4
 
-~68 ~92 ~80     ; push str_num_passes
+~68 ~92 ~70     ; push str_num_passes
 ~b8 ~03 ~00     ; mov ax, os_print_string
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
@@ -254,7 +254,7 @@ run_tests:
 ~ff ~d0         ; call ax
 ~83 ~c4 ~04     ; add sp, 4
 
-~68 ~9c ~80     ; push str_num_failures
+~68 ~9c ~70     ; push str_num_failures
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
@@ -268,7 +268,7 @@ run_tests:
 ~c3             ; ret
 
 ; times 0x400 - ($ - $$) db 0
-                        ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
@@ -287,7 +287,7 @@ run_tests:
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8400
+; 0x7400
 ; ------------------------------------------------------------------------------
 ; test_os_print_int(int *pass_count, int *fail_count)
 ;   Runs the unit tests for os_print_int, os_int_to_string, and os_string_to_int.
@@ -299,7 +299,7 @@ run_tests:
 ;     AX - non-zero if all tests succeeded, 0 if one or more tests failed
 ; ------------------------------------------------------------------------------
 
-; 0x8400
+; 0x7400
 ; str_os_print_int:
 ;     db 'os_print_int', 0
 ~6f ~73 ~5f ~70 ~72 ~69 ~6e ~74   ~5f ~69 ~6e ~74 ~00
@@ -310,10 +310,10 @@ run_tests:
 ~68 ~65 ~20 ~6e ~75 ~6d ~62 ~65   ~72 ~20 ~32 ~37 ~34 ~38 ~20 ~28
 ~30 ~78 ~41 ~42 ~43 ~29 ~20 ~70   ~72 ~69 ~6e ~74 ~65 ~64 ~20 ~69
 ~6e ~20 ~64 ~2c ~20 ~67 ~2c ~20   ~78 ~2c ~20 ~58 ~2c ~20 ~30 ~78
-~2c ~20 ~61 ~6e ~64 ~20 ~30 ~58   ~00
+~2c ~20 ~61 ~6e ~64 ~20 ~30 ~58   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8450
-test_os_print_int:
+; 0x7450
+; test_os_print_int:
 ~55             ; push bp
 ~89 ~e5         ; mov bp, sp
 ~83 ~ec ~06     ; sub sp, 6               ; int test_number,
@@ -323,12 +323,12 @@ test_os_print_int:
 ~c7 ~46 ~fc ~00 ~00 ; mov word [bp - 4], 0    ; pass_count = 0
 ~c7 ~46 ~fa ~00 ~00 ; mov word [bp - 6], 0    ; fail_count = 0
 
-~68 ~00 ~84     ; push str_os_print_int
+~68 ~00 ~74     ; push str_os_print_int
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
 
-~68 ~0d ~84     ; push str_os_print_int_expected
+~68 ~0d ~74     ; push str_os_print_int_expected
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
@@ -408,4 +408,4 @@ test_os_print_int:
                             ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8510
+; 0x7510
