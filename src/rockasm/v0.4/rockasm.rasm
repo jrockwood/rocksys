@@ -13,12 +13,12 @@
 ;
 
 ; [BITS 16]               ; Tells the assembler to use 16 bit code
-; [ORG 0x8000]            ; The kernel will load us into this address
+; [ORG 0x7000]            ; The kernel will load us into this address
 
 ; start:
 ~e9 ~fd ~00 ; jmp main
 
-; 0x8003
+; 0x7003
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Data Section
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -38,14 +38,14 @@
 ; times 0x20 - ($ - $$) db 0
                             ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8020
+; 0x7020
 ; str_banner:
 ;     db `RockAsm 0.4 - Rockwood Assembler`, 0
 ~52 ~6f ~63 ~6b ~41 ~73 ~6d ~20   ~30 ~2e ~34 ~20 ~2d ~20 ~52 ~6f
 ~63 ~6b ~77 ~6f ~6f ~64 ~20 ~41   ~73 ~73 ~65 ~6d ~62 ~6c ~65 ~72
 ~00
 
-; 0x8041
+; 0x7041
 ; str_copyright:
 ;     db `Copyright (c) 2020 Justin Rockwood. All rights reserved.`, 0
     ~43 ~6f ~70 ~79 ~72 ~69 ~67   ~68 ~74 ~20 ~28 ~63 ~29 ~20 ~32
@@ -82,7 +82,7 @@
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8100
+; 0x7100
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -91,11 +91,11 @@
     ; --------------------------------------------------------------------------
     ; Display the loading message.
 
-~68 ~20 ~80 ; push str_banner
+~68 ~20 ~70 ; push str_banner
 ~b8 ~06 ~00 ; mov ax, os_print_line
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
-~68 ~41 ~80 ; push str_copyright
+~68 ~41 ~70 ; push str_copyright
 ~b8 ~06 ~00 ; mov ax, os_print_line
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
@@ -105,24 +105,24 @@
     ; --------------------------------------------------------------------------
     ; Compile
 
-~b8 ~50 ~81 ; mov ax, compile
+~b8 ~50 ~71 ; mov ax, compile
 ~ff ~d0     ; call ax
 
     ; --------------------------------------------------------------------------
     ; We're done so print a message and then return to the OS.
 
 ; .finished:
-~68 ~b9 ~80 ; push str_done
+~68 ~b9 ~70 ; push str_done
 ~b8 ~03 ~00 ; mov ax, os_print_string
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
-~68 ~07 ~80 ; push int_to_str_buffer
+~68 ~07 ~70 ; push int_to_str_buffer
 ~6a ~67     ; push 'g'
-~ff ~36 ~0d ~80 ; push word [current_line]
+~ff ~36 ~0d ~70 ; push word [current_line]
 ~b8 ~27 ~00 ; mov ax, os_int_to_string
 ~ff ~d0     ; call ax
 ~83 ~c4 ~06 ; add sp, 6
-~68 ~07 ~80 ; push int_to_str_buffer
+~68 ~07 ~70 ; push int_to_str_buffer
 ~b8 ~06 ~00 ; mov ax, os_print_line
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
@@ -133,7 +133,7 @@
 ; times 0x150 - ($ - $$) db 0
                                   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8150
+; 0x7150
 ; ------------------------------------------------------------------------------
 ; compile()
 ;   Compiles the source program from text to a binary.
@@ -141,18 +141,18 @@
 
 ; compile:
 ; .loop:
-~b8 ~a0 ~82 ; mov ax, compile_hex_pair
+~b8 ~a0 ~72 ; mov ax, compile_hex_pair
 ~ff ~d0     ; call ax
 ~83 ~f8 ~01 ; cmp ax, 1
 ~74 ~f6     ; je .loop
-~b8 ~40 ~82 ; mov ax, flush_write_buffer
+~b8 ~40 ~72 ; mov ax, flush_write_buffer
 ~ff ~d0     ; call ax
 ~c3         ; ret
 
 ; times 0x170 - ($ - $$) db 0
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8170
+; 0x7170
 ; ------------------------------------------------------------------------------
 ; skip_whitespace()
 ;   Skips over comments and whitespace.
@@ -165,7 +165,7 @@
 
 ; skip_whitespace:
 ; .loop:
-~b8 ~a0 ~81 ; mov ax, read_char
+~b8 ~a0 ~71 ; mov ax, read_char
 ~ff ~d0     ; call ax
 ~3c ~20     ; cmp al, ' '
 ~74 ~f7     ; je .loop
@@ -179,7 +179,7 @@
 ~74 ~01     ; je .read_to_line_end
 ~c3         ; ret
 ; .read_to_line_end:
-~b8 ~a0 ~81 ; mov ax, read_char
+~b8 ~a0 ~71 ; mov ax, read_char
 ~ff ~d0     ; call ax
 ~3c ~0a     ; cmp al, `\n`
 ~74 ~dd     ; je .loop
@@ -190,7 +190,7 @@
 ; times 0x1a0 - ($ - $$) db 0
                                   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x81a0
+; 0x71a0
 ; ------------------------------------------------------------------------------
 ; read_char()
 ;   Reads the next character from memory or loads the next sector from disk into
@@ -203,45 +203,45 @@
 ; ------------------------------------------------------------------------------
 
 ; read_char:
-~8b ~36 ~0f ~80 ; mov si, [read_buffer_pos]   ; set SI to the address to read
+~8b ~36 ~0f ~70 ; mov si, [read_buffer_pos]   ; set SI to the address to read
 ~83 ~fe ~ff     ; cmp word si, -1             ; -1 indicates that we need to load another sector
 ~75 ~07         ; jne .read_byte
 ; .load_needed:
 ~e8 ~26 ~00     ; call .load_next_sector
-~8b ~36 ~0f ~80 ; mov si, [read_buffer_pos]
+~8b ~36 ~0f ~70 ; mov si, [read_buffer_pos]
 ; .read_byte:
 ~ac             ; lodsb
 ~3c ~0a         ; cmp al, `\n`
 ~75 ~04         ; jne .check_load_needed
-~ff ~06 ~0d ~80 ; inc word [current_line]
+~ff ~06 ~0d ~70 ; inc word [current_line]
 ; .check_load_needed:
-~8b ~1e ~03 ~80 ; mov bx, [read_buffer_address]   ; see if we'll need another sector next time
+~8b ~1e ~03 ~70 ; mov bx, [read_buffer_address]   ; see if we'll need another sector next time
 ~81 ~c3 ~00 ~02 ; add bx, 512
 ~39 ~de         ; cmp si, bx
 ~7d ~06         ; jge .set_load_needed
-~ff ~06 ~0f ~80 ; inc word [read_buffer_pos]
+~ff ~06 ~0f ~70 ; inc word [read_buffer_pos]
 ~eb ~06         ; jmp .exit
 ; .set_load_needed:
-~c7 ~06 ~0f ~80 ~ff ~ff ; mov word [read_buffer_pos], -1
+~c7 ~06 ~0f ~70 ~ff ~ff ; mov word [read_buffer_pos], -1
 ; .exit:
 ~c3         ; ret
 
 ; .load_next_sector:
-~ff ~36 ~03 ~80 ; push word [read_buffer_address] ; dest_address
+~ff ~36 ~03 ~70 ; push word [read_buffer_address] ; dest_address
 ~6a ~01         ; push word 1                     ; sector_count
-~ff ~36 ~13 ~80 ; push word [src_sector_number]   ; sector_number
+~ff ~36 ~13 ~70 ; push word [src_sector_number]   ; sector_number
 ~b8 ~21 ~00     ; mov ax, os_read_sectors
 ~ff ~d0         ; call ax
 ~83 ~c4 ~06     ; add sp, 6
 ~3c ~00         ; cmp al, 0
 ~74 ~0b         ; je .disk_read_error
-~ff ~06 ~13 ~80 ; inc word [src_sector_number]
-~a1 ~03 ~80     ; mov ax, [read_buffer_address]   ; reset the read_buffer_pos to the start
-~a3 ~0f ~80     ; mov [read_buffer_pos], ax
+~ff ~06 ~13 ~70 ; inc word [src_sector_number]
+~a1 ~03 ~70     ; mov ax, [read_buffer_address]   ; reset the read_buffer_pos to the start
+~a3 ~0f ~70     ; mov [read_buffer_pos], ax
 ~c3             ; ret
 ; .disk_read_error:
 ~50         ; push ax             ; AH contains error code
-~68 ~7a ~80 ; push str_disk_read_error
+~68 ~7a ~70 ; push str_disk_read_error
 ~b8 ~03 ~00 ; mov ax, os_print_string
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
@@ -260,7 +260,7 @@
 
             ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8220
+; 0x7220
 ; ------------------------------------------------------------------------------
 ; write_byte()
 ;   Writes a byte to the memory buffer and automatically flushes to disk when a
@@ -273,10 +273,10 @@
 ; ------------------------------------------------------------------------------
 
 ; write_byte:
-~8b ~3e ~11 ~80 ; mov di, [write_buffer_pos]
+~8b ~3e ~11 ~70 ; mov di, [write_buffer_pos]
 ~aa             ; stosb
-~ff ~06 ~11 ~80 ; inc word [write_buffer_pos]
-~a1 ~05 ~80     ; mov ax, [write_buffer_address]
+~ff ~06 ~11 ~70 ; inc word [write_buffer_pos]
+~a1 ~05 ~70     ; mov ax, [write_buffer_address]
 ~05 ~00 ~02     ; add ax, 512
 ~39 ~c7         ; cmp word di, ax
 ~7d ~04         ; jge .flush
@@ -289,7 +289,7 @@
 ; times 0x240 - ($ - $$) db 0
                                               ~00 ~00 ~00 ~00 ~00
 
-; 0x8240
+; 0x7240
 ; ------------------------------------------------------------------------------
 ; flush_write_buffer()
 ;   Flushes to disk the contents of the write buffer.
@@ -302,31 +302,31 @@
 
 ; flush_write_buffer:
     ; Fill the rest of the buffer with zeros
-~8b ~0e ~05 ~80 ; mov cx, [write_buffer_address]
+~8b ~0e ~05 ~70 ; mov cx, [write_buffer_address]
 ~81 ~c1 ~00 ~02 ; add cx, 512
-~2b ~0e ~11 ~80 ; sub cx, [write_buffer_pos]
+~2b ~0e ~11 ~70 ; sub cx, [write_buffer_pos]
 ~78 ~09         ; js .write       ; don't repeat if we have a full buffer (the subtraction was negative)
 ~b8 ~00 ~00     ; mov ax, 0
-~8b ~3e ~11 ~80 ; mov di, [write_buffer_pos]
+~8b ~3e ~11 ~70 ; mov di, [write_buffer_pos]
 ~f3 ~ab         ; rep stosw
 ; .write:
     ; Write the buffer to disk
-~ff ~36 ~05 ~80 ; push word [write_buffer_address]; source_address
+~ff ~36 ~05 ~70 ; push word [write_buffer_address]; source_address
 ~6a ~01         ; push word 1                     ; sector_count
-~ff ~36 ~15 ~80 ; push word [dest_sector_number]  ; sector_number
+~ff ~36 ~15 ~70 ; push word [dest_sector_number]  ; sector_number
 ~b8 ~24 ~00     ; mov ax, os_write_sectors
 ~ff ~d0         ; call ax
 ~83 ~c4 ~06     ; add sp, 6
 ~3c ~00         ; cmp al, 0
 ~74 ~0e         ; je .disk_write_error
-~a1 ~05 ~80     ; mov ax, [write_buffer_address]  ; reset the write_buffer_pos to point to the start
-~a3 ~11 ~80     ; mov [write_buffer_pos], ax
-~ff ~06 ~15 ~80 ; inc word [dest_sector_number]
+~a1 ~05 ~70     ; mov ax, [write_buffer_address]  ; reset the write_buffer_pos to point to the start
+~a3 ~11 ~70     ; mov [write_buffer_pos], ax
+~ff ~06 ~15 ~70 ; inc word [dest_sector_number]
 ~b8 ~01 ~00     ; mov ax, 1
 ~c3             ; ret
 ; .disk_write_error:
 ~50             ; push ax         ; AH contains error code
-~68 ~8c ~80     ; push str_disk_write_error
+~68 ~8c ~70     ; push str_disk_write_error
 ~b8 ~03 ~00     ; mov ax, os_print_string
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
@@ -344,7 +344,7 @@
 ; times 0x2a0 - ($ - $$) db 0
                                                   ~00 ~00 ~00 ~00
 
-; 0x82a0
+; 0x72a0
 ; ------------------------------------------------------------------------------
 ; compile_hex_pair()
 ;   Compiles a hex pair of the form ~xx where x is a hex character.
@@ -356,7 +356,7 @@
 ; ------------------------------------------------------------------------------
 
 ; compile_hex_pair:
-~b8 ~70 ~81 ; mov ax, skip_whitespace
+~b8 ~70 ~71 ; mov ax, skip_whitespace
 ~ff ~d0     ; call ax
 ~3c ~00     ; cmp al, 0
 ~74 ~24     ; je .exit
@@ -364,7 +364,7 @@
 ~75 ~21     ; jne .invalid_hex_pair
 
     ; First char
-~b8 ~00 ~83 ; mov ax, convert_hex_char
+~b8 ~00 ~73 ; mov ax, convert_hex_char
 ~ff ~d0     ; call ax
 ~80 ~fc ~00 ; cmp ah, 0
 ~74 ~17     ; je .invalid_hex_pair
@@ -372,28 +372,28 @@
 ~50         ; push ax
 
     ; Second char
-~b8 ~00 ~83 ; mov ax, convert_hex_char
+~b8 ~00 ~73 ; mov ax, convert_hex_char
 ~ff ~d0     ; call ax
 ~80 ~fc ~00 ; cmp ah, 0
 ~74 ~09     ; je .invalid_hex_pair
 ~5b         ; pop bx              ; BL (0xf0) = first converted char
 ~08 ~d8     ; or al, bl           ; AX = converted pair
-~bb ~20 ~82 ; mov bx, write_byte
+~bb ~20 ~72 ; mov bx, write_byte
 ~ff ~d3     ; call bx
 ; .exit:
 ~c3         ; ret
 ; .invalid_hex_pair:
-~68 ~9f ~80 ; push str_invalid_hex_pair
+~68 ~9f ~70 ; push str_invalid_hex_pair
 ~b8 ~03 ~00 ; mov ax, os_print_string
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
-~68 ~07 ~80 ; push int_to_str_buffer
+~68 ~07 ~70 ; push int_to_str_buffer
 ~6a ~64     ; push 'd'
-~ff ~36 ~0d ~80 ; push word [current_line]
+~ff ~36 ~0d ~70 ; push word [current_line]
 ~b8 ~27 ~00 ; mov ax, os_int_to_string
 ~ff ~d0     ; call ax
 ~83 ~c4 ~06 ; add sp, 6
-~68 ~07 ~80 ; push int_to_str_buffer
+~68 ~07 ~70 ; push int_to_str_buffer
 ~b8 ~06 ~00 ; mov ax, os_print_line
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
@@ -403,7 +403,7 @@
 ; times 0x300 - ($ - $$) db 0
                                       ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8300
+; 0x7300
 ; ------------------------------------------------------------------------------
 ; convert_hex_char()
 ;   Converts a hex character to a number.
@@ -416,7 +416,7 @@
 ; ------------------------------------------------------------------------------
 
 ; convert_hex_char:
-~b8 ~a0 ~81 ; mov ax, read_char
+~b8 ~a0 ~71 ; mov ax, read_char
 ~ff ~d0     ; call ax
 ~3c ~30     ; cmp al, '0'
 ~7c ~16     ; jl .error
@@ -442,4 +442,4 @@
 ; times 0x330 - ($ - $$) db 0
                     ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x8330
+; 0x7330
