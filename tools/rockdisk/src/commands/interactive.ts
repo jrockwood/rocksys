@@ -82,8 +82,9 @@ async function startInteractiveSession(options: InteractiveOptions): Promise<num
       choices: [
         { key: 'b', name: 'Compile bootload.rasm', value: 'bootload' },
         { key: 'k', name: 'Compile kernel.rasm', value: 'kernel' },
-        { key: 'u', name: 'Compile kernel_test.rasm', value: 'kernel_test' },
+        { key: 'u', name: 'Compile kernel_test.rasm', value: 'kernelTest' },
         { key: 'a', name: 'Compile rockasm.rasm', value: 'assembler' },
+        { key: 'o', name: 'Build kernel_test disk', value: 'kernelTestDisk' },
       ],
     },
   ];
@@ -102,7 +103,7 @@ async function startInteractiveSession(options: InteractiveOptions): Promise<num
       }
       break;
 
-    case 'kernel_test':
+    case 'kernelTest':
       if (!(await compileFile(options, 'kernel_test', true))) {
         return 3;
       }
@@ -111,6 +112,12 @@ async function startInteractiveSession(options: InteractiveOptions): Promise<num
     case 'assembler':
       if (!(await compileFile(options, 'rockasm', false))) {
         return 4;
+      }
+      break;
+
+    case 'kernelTestDisk':
+      if (!(await createKernelTestDisk(options))) {
+        return 5;
       }
       break;
   }
@@ -137,7 +144,11 @@ async function compileFile(options: InteractiveOptions, baseFileName: string, is
   const sourceFileToCompile = isOsFile
     ? sourceFileTree.getOsFile(answers.fileVersion, `${baseFileName}.rasm`)
     : sourceFileTree.getAssemblerFile(answers.fileVersion, `${baseFileName}.rasm`);
-  const floppyOptions: BootableOsFloppyOptions = await promptForBinFiles(sourceFileTree, sourceFileToCompile);
+  const floppyOptions: BootableOsFloppyOptions = await promptForBinFiles(
+    sourceFileTree,
+    'assembler',
+    sourceFileToCompile,
+  );
   const destinationBinFile = path.resolve(
     path.dirname(sourceFileToCompile),
     path.basename(sourceFileToCompile, 'rasm') + 'bin',
@@ -185,9 +196,32 @@ async function compileFile(options: InteractiveOptions, baseFileName: string, is
   return true;
 }
 
+async function createKernelTestDisk(options: InteractiveOptions): Promise<boolean> {
+  const sourceFileTree = options.sourceFileTree;
+  const floppyOptions: BootableOsFloppyOptions = await promptForBinFiles(sourceFileTree, 'kernel_test');
+
+  try {
+    createBootableOsFloppy(floppyOptions);
+    console.log(
+      `Now run the ${path.basename(
+        floppyOptions.destinationFloppyImage,
+      )} in a virtual machine to run the kernel unit tests.`,
+    );
+  } catch (e) {
+    const err = e as Error;
+    console.log(colors.red(err.message));
+    return false;
+  }
+
+  return true;
+}
+
+type ProgramKind = 'assembler' | 'kernel_test';
+
 async function promptForBinFiles(
   sourceFileTree: SourceFileTree,
-  sourceFileToCompile: string,
+  programKind: ProgramKind,
+  sourceFileToCompile?: string,
 ): Promise<BootableOsFloppyOptions> {
   const osVersions: string[] = sourceFileTree.getOsVersions().reverse();
   const assemblerVersions: string[] = sourceFileTree.getAssemblerVersions().reverse();
@@ -210,26 +244,37 @@ async function promptForBinFiles(
       message: 'Which version of the assembler do you want to use?',
       type: 'list',
       choices: assemblerVersions,
+      when: () => programKind === 'assembler',
+    },
+    {
+      name: 'kernelTestVersion',
+      message: 'Which version of the kernel_test.bin do you want to use?',
+      type: 'list',
+      choices: osVersions,
+      when: () => programKind === 'kernel_test',
     },
   ];
 
   const answers: inquirer.Answers = await inquirer.prompt(questions);
   const bootloadBinFile = sourceFileTree.getOsFile(answers.bootloadBinVersion, 'bootload.bin');
   const kernelBinFile = sourceFileTree.getOsFile(answers.kernelBinVersion, 'kernel.bin');
-  const assemblerBinFile = sourceFileTree.getAssemblerBin(answers.assemblerVersion);
-  const sectorMap = await promptForSectorMap();
+  const programBinFile =
+    programKind === 'assembler'
+      ? sourceFileTree.getAssemblerBin(answers.assemblerVersion)
+      : sourceFileTree.getOsFile(answers.kernelTestVersion, 'kernel_test.bin');
+  const sectorMap = await promptForSectorMap(programKind);
 
   return {
     destinationFloppyImage: sourceFileTree.floppyVfdFile,
     bootloadBinFile,
     kernelBinFile,
-    assemblerBinFile,
+    programBinFile,
     sourceFileToCompile,
     sectorMap,
   };
 }
 
-async function promptForSectorMap(): Promise<OsFloppySectorMap> {
+async function promptForSectorMap(programKind: ProgramKind): Promise<OsFloppySectorMap> {
   const bootSector: FloppyDiskSectorRange = await promptForSector('bootloader', defaultOsFloppySectorMap.bootSector);
 
   const kernelSector: FloppyDiskSectorRange = await promptForSector(
@@ -237,25 +282,30 @@ async function promptForSectorMap(): Promise<OsFloppySectorMap> {
     new FloppyDiskSectorRange(bootSector.endSector + 1, defaultOsFloppySectorMap.kernelSector.sectorCount),
   );
 
-  const assemblerSector: FloppyDiskSectorRange = await promptForSector(
-    'assembler',
-    new FloppyDiskSectorRange(kernelSector.endSector + 1, defaultOsFloppySectorMap.assemblerSector.sectorCount),
+  const programSector: FloppyDiskSectorRange = await promptForSector(
+    programKind,
+    new FloppyDiskSectorRange(kernelSector.endSector + 1, defaultOsFloppySectorMap.programSector.sectorCount),
   );
 
-  const sourceFileSector: FloppyDiskSectorRange = await promptForSector(
-    'source file',
-    new FloppyDiskSectorRange(assemblerSector.endSector + 1, defaultOsFloppySectorMap.sourceFileSector.sectorCount),
+  let sourceFileSector = new FloppyDiskSectorRange(
+    programSector.endSector + 1,
+    defaultOsFloppySectorMap.sourceFileSector.sectorCount,
   );
 
-  const assembledFileSector: FloppyDiskSectorRange = await promptForSector(
-    'output assembled file',
-    new FloppyDiskSectorRange(sourceFileSector.endSector + 1, defaultOsFloppySectorMap.assembledFileSector.sectorCount),
+  let assembledFileSector = new FloppyDiskSectorRange(
+    sourceFileSector.endSector + 1,
+    defaultOsFloppySectorMap.assembledFileSector.sectorCount,
   );
+
+  if (programKind === 'assembler') {
+    sourceFileSector = await promptForSector('source file', sourceFileSector);
+    assembledFileSector = await promptForSector('output assembled file', assembledFileSector);
+  }
 
   return {
     bootSector,
     kernelSector,
-    assemblerSector,
+    programSector,
     sourceFileSector,
     assembledFileSector,
   };

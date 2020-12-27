@@ -43,7 +43,7 @@ describe('OsDisk', () => {
       buffer.writeUInt8(4, 515);
 
       // assembler
-      const assemblerOffset = defaultOsFloppySectorMap.assemblerSector.startAddress;
+      const assemblerOffset = defaultOsFloppySectorMap.programSector.startAddress;
       buffer.writeUInt8(5, assemblerOffset);
       buffer.writeUInt8(6, assemblerOffset + 1);
       buffer.writeUInt8(7, assemblerOffset + 2);
@@ -60,7 +60,7 @@ describe('OsDisk', () => {
         destinationFloppyImage,
         bootloadBinFile,
         kernelBinFile,
-        assemblerBinFile,
+        programBinFile: assemblerBinFile,
         sourceFileToCompile,
         sectorMap: defaultOsFloppySectorMap,
       });
@@ -75,7 +75,7 @@ describe('OsDisk', () => {
         destinationFloppyImage,
         bootloadBinFile,
         kernelBinFile,
-        assemblerBinFile,
+        programBinFile: assemblerBinFile,
         sourceFileToCompile,
         sectorMap: defaultOsFloppySectorMap,
       });
@@ -98,7 +98,7 @@ describe('OsDisk', () => {
           destinationFloppyImage,
           bootloadBinFile,
           kernelBinFile,
-          assemblerBinFile,
+          programBinFile: assemblerBinFile,
           sourceFileToCompile,
           sectorMap: defaultOsFloppySectorMap,
         });
@@ -119,7 +119,7 @@ describe('OsDisk', () => {
           destinationFloppyImage,
           bootloadBinFile,
           kernelBinFile,
-          assemblerBinFile,
+          programBinFile: assemblerBinFile,
           sourceFileToCompile,
           sectorMap: defaultOsFloppySectorMap,
         });
@@ -140,7 +140,7 @@ describe('OsDisk', () => {
           destinationFloppyImage,
           bootloadBinFile,
           kernelBinFile,
-          assemblerBinFile,
+          programBinFile: assemblerBinFile,
           sourceFileToCompile,
           sectorMap: defaultOsFloppySectorMap,
         });
@@ -161,7 +161,7 @@ describe('OsDisk', () => {
           destinationFloppyImage,
           bootloadBinFile,
           kernelBinFile,
-          assemblerBinFile,
+          programBinFile: assemblerBinFile,
           sourceFileToCompile,
           sectorMap: defaultOsFloppySectorMap,
         });
@@ -229,7 +229,7 @@ describe('OsDisk', () => {
       options.sectorMap = {
         bootSector: new FloppyDiskSectorRange(0, 1),
         kernelSector: new FloppyDiskSectorRange(1, 1),
-        assemblerSector: new FloppyDiskSectorRange(2, 1),
+        programSector: new FloppyDiskSectorRange(2, 1),
         sourceFileSector: new FloppyDiskSectorRange(3, 1),
         assembledFileSector: new FloppyDiskSectorRange(4, 1),
       };

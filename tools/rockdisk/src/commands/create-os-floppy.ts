@@ -102,7 +102,7 @@ function resolveOptions(parsedArgs: yargs.Arguments<RawArgs>): BootableOsFloppyO
     destinationFloppyImage,
     bootloadBinFile: paths.osBootloadBin,
     kernelBinFile: paths.osKernelBin,
-    assemblerBinFile: paths.assemblerBin,
+    programBinFile: paths.assemblerBin,
     sourceFileToCompile,
     sectorMap,
   };
