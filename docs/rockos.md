@@ -254,14 +254,13 @@ _Note:_ The address is a half-open range, not including the ending number
 
 ### Building
 
-We can use v0.3 of the assembler to compile the bootloader and kernel, so we're
-repurposing the `build.cmd` batch file to build the kernel and introducing
-`build_bootloader.cmd` and `build_unit_tests.cmd` to build the kernel tests.
-
-The bootloader and kernel will need to be copied back to their `.bin` versions,
-so a `postbuild_bootloader.cmd` and `postbuild_kernel.cmd` are also introduced.
-You run those after running the disk image in the virtual machine to get the
-compiled versions back out to disk.
+In order to accomodate building the OS using various versions of the bootloader,
+kernel, and assembler, we are creating a console-based interactive program in
+the rockdisk tool. Simply run `node bin\rockdisk interactive` from the
+`tools\rockdisk` directory to build up the virtual disk to assemble the various
+pieces of the OS. Maybe this is cheating from using just a text and hex editor
+`;)`, but it makes hand copying over the files less tedious and less error
+prone.
 
 ## References
 
