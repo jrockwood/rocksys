@@ -28,22 +28,22 @@ export const sectorsFor1MB = 2000;
 export class OsFloppySectorMap {
   public readonly bootSector: FloppyDiskSectorRange;
   public readonly kernelSector: FloppyDiskSectorRange;
-  public readonly assemblerSector: FloppyDiskSectorRange;
+  public readonly programSector: FloppyDiskSectorRange;
   public readonly sourceFileSector: FloppyDiskSectorRange;
   public readonly assembledFileSector: FloppyDiskSectorRange;
 
   public constructor(
     kernelSector?: FloppyDiskSectorRange,
-    assemblerSector?: FloppyDiskSectorRange,
+    programSector?: FloppyDiskSectorRange,
     sourceFileSector?: FloppyDiskSectorRange,
     assembledFileSector?: FloppyDiskSectorRange,
   ) {
     this.bootSector = new FloppyDiskSectorRange(0, 1);
     this.kernelSector = kernelSector || new FloppyDiskSectorRange(1, sectorsFor28K);
-    this.assemblerSector = assemblerSector || new FloppyDiskSectorRange(this.kernelSector.endSector + 1, sectorsFor28K);
+    this.programSector = programSector || new FloppyDiskSectorRange(this.kernelSector.endSector + 1, sectorsFor28K);
 
     this.sourceFileSector =
-      sourceFileSector || new FloppyDiskSectorRange(this.assemblerSector.endSector + 1, sectorsFor1MB);
+      sourceFileSector || new FloppyDiskSectorRange(this.programSector.endSector + 1, sectorsFor1MB);
 
     this.assembledFileSector =
       assembledFileSector || new FloppyDiskSectorRange(this.sourceFileSector.endSector + 1, sectorsFor28K);
@@ -62,11 +62,11 @@ export interface BootableOsFloppyOptions {
   /** Path to the kernel.bin file to use. */
   kernelBinFile: string;
 
-  /** The rockasm.bin file to copy to the floppy disk image. */
-  assemblerBinFile: string;
+  /** The program .bin file to copy to the floppy disk image (usually rockasm.bin or kernel_test.bin). */
+  programBinFile: string;
 
-  /** Path to the source file to compile. */
-  sourceFileToCompile: string;
+  /** Path to the source file to compile. Only used if the assembler is the program to run. */
+  sourceFileToCompile?: string;
 
   /**
    * A sector map describing where each section of the OS resides on the floppy disk.
@@ -89,8 +89,10 @@ export function createBootableOsFloppy(options: BootableOsFloppyOptions): void {
   // copy the parts to the right place on disk
   copyDiskPart(options.destinationFloppyImage, options.bootloadBinFile, options.sectorMap.bootSector);
   copyDiskPart(options.destinationFloppyImage, options.kernelBinFile, options.sectorMap.kernelSector);
-  copyDiskPart(options.destinationFloppyImage, options.assemblerBinFile, options.sectorMap.assemblerSector);
-  copyDiskPart(options.destinationFloppyImage, options.sourceFileToCompile, options.sectorMap.sourceFileSector);
+  copyDiskPart(options.destinationFloppyImage, options.programBinFile, options.sectorMap.programSector);
+  if (options.sourceFileToCompile) {
+    copyDiskPart(options.destinationFloppyImage, options.sourceFileToCompile, options.sectorMap.sourceFileSector);
+  }
 }
 
 function copyDiskPart(destinationFile: string, sourceBinFile: string, sectorRange: DiskSectorRange): void {
@@ -141,7 +143,7 @@ export async function compileOs(options: CompileOsOptions, prompter: Prompter = 
     destinationFloppyImage: options.destinationFloppyImage,
     bootloadBinFile: options.bootloadBinDestinationFile,
     kernelBinFile: options.kernelBinDestinationFile,
-    assemblerBinFile: options.assemblerBinFile,
+    programBinFile: options.assemblerBinFile,
     sourceFileToCompile: options.bootloadSourceFile,
     sectorMap,
   });
@@ -167,7 +169,7 @@ export async function compileOs(options: CompileOsOptions, prompter: Prompter = 
     destinationFloppyImage: options.destinationFloppyImage,
     bootloadBinFile: options.bootloadBinDestinationFile,
     kernelBinFile: options.kernelBinDestinationFile,
-    assemblerBinFile: options.assemblerBinFile,
+    programBinFile: options.assemblerBinFile,
     sourceFileToCompile: options.kernelSourceFile,
     sectorMap,
   });
@@ -193,7 +195,7 @@ export async function compileOs(options: CompileOsOptions, prompter: Prompter = 
     destinationFloppyImage: options.destinationFloppyImage,
     bootloadBinFile: options.bootloadBinDestinationFile,
     kernelBinFile: options.kernelBinDestinationFile,
-    assemblerBinFile: options.assemblerBinFile,
+    programBinFile: options.assemblerBinFile,
     sourceFileToCompile: options.kernelUnitTestSourceFile,
     sectorMap,
   });
@@ -219,7 +221,7 @@ export async function compileOs(options: CompileOsOptions, prompter: Prompter = 
     destinationFloppyImage: options.destinationFloppyImage,
     bootloadBinFile: options.bootloadBinDestinationFile,
     kernelBinFile: options.kernelBinDestinationFile,
-    assemblerBinFile: options.kernelUnitTestBinFile,
+    programBinFile: options.kernelUnitTestBinFile,
     sourceFileToCompile: options.kernelUnitTestSourceFile,
     sectorMap,
   });

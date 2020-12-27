@@ -54,7 +54,7 @@ describe('compile-os CLI command', () => {
       const sectorMap: OsFloppySectorMap = {
         bootSector: new FloppyDiskSectorRange(0, 1),
         kernelSector: new FloppyDiskSectorRange(1, 1),
-        assemblerSector: new FloppyDiskSectorRange(2, 2),
+        programSector: new FloppyDiskSectorRange(2, 2),
         sourceFileSector: new FloppyDiskSectorRange(3, 3),
         assembledFileSector: new FloppyDiskSectorRange(4, 4),
       };
