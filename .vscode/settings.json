@@ -1,10 +1,16 @@
 {
+  "[asm]": {
+    "editor.formatOnSave": false
+  },
   "editor.detectIndentation": false,
   "editor.formatOnSave": true,
   "editor.insertSpaces": true,
   "editor.rulers": [34, 65, 80],
   "editor.tabSize": 2,
   "editor.trimAutoWhitespace": true,
+  "files.associations": {
+    "*.inc": "asm"
+  },
   "files.eol": "\n",
   "files.exclude": {
     "**/.DS_Store": true,
