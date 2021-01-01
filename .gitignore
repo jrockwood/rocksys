@@ -3,3 +3,5 @@ assembled.bin
 disks/*.vfd
 node_modules/
 tools/rockdisk/lib/
+tools/nasm/test.bin
+tools/nasm/test.nasm
