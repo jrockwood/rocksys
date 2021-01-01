@@ -90,6 +90,9 @@ caller:
 - **[Disk](#disk)**
   - `os_read_sectors`
   - `os_write_sectors`
+- **[Memory](#memory)**
+  - `os_free`
+  - `os_malloc`
 - **[Screen](#screen)**
   - `os_print_char`
   - `os_print_hex_byte`
@@ -154,6 +157,8 @@ void *bsearch(
     the place in which the element should be inserted. Can be NULL if the caller
     doesn't need the insertion address.
 
+---
+
 ## Disk
 
 ### `os_read_sectors(sector_number, sector_count, *dest_address)`
@@ -181,6 +186,48 @@ void *bsearch(
   - `sector_number` - logical sector number to write (0-based)
   - `sector_count` - number of sectors to write
   - `*source_address` - source address
+
+---
+
+## Memory
+
+### `os_free(*mem_block)`
+
+> Deallocates or frees a block of memory.
+
+#### C Declaration
+
+```c
+void free(void *memblock);
+```
+
+#### Call Information
+
+- **Address** - `0x36`
+- **Returns** - Nothing
+- **Parameters**
+  - `*mem_block` - previously allocated memory block to be freed
+
+### `os_malloc(size)`
+
+> Allocates memory blocks from the heap.
+
+The heap starts at `0x3000:0000`, so make sure to set the DS or ES registers
+before calling other OS functions that use `lods` or `stos`.
+
+#### C Declaration
+
+```c
+void *malloc(size_t size);
+```
+
+#### Call Information
+
+- **Address** - `0x33`
+- **Returns**
+  - `AX` - address of the allocated memory, 0 if there is insufficient space
+- **Parameters**
+  - `size` - bytes to allocate
 
 ---
 

@@ -230,6 +230,20 @@
 ~b8 ~09 ~00     ; mov ax, os_print_newline
 ~ff ~d0         ; call ax
 
+  ; test_os_malloc
+~89 ~e8         ; mov ax, bp
+~83 ~e8 ~04     ; sub ax, 4
+~50             ; push ax                     ; fail_count = &fail_count
+~83 ~c0 ~02     ; add ax, 2
+~50             ; push ax                     ; pass_count = &pass_count
+~b8 ~e0 ~76     ; mov ax, test_os_malloc
+~ff ~d0         ; call ax
+~83 ~c4 ~04     ; add sp, 4
+
+    ; print a blank line
+~b8 ~09 ~00     ; mov ax, os_print_newline
+~ff ~d0         ; call ax
+
     ; see if we should print the "All tests passed!" message or a count of the failures
 ~8b ~46 ~fc     ; mov ax, [bp - 4]            ; AX = fail_count
 ~83 ~f8 ~00     ; cmp ax, 0
@@ -282,10 +296,7 @@
 ~c3             ; ret
 
 ; times 0x400 - ($ - $$) db 0
-                                                          ~00 ~00
-~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
-
-~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                    ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -698,3 +709,136 @@
                         ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ; 0x76d0
+; ------------------------------------------------------------------------------
+; test_os_malloc(int *pass_count, int *fail_count)
+;   Runs the unit tests for os_malloc.
+;
+;   Input
+;     pass_count - pointer to store the count of tests that passed
+;     fail_count - pointer to store the count of tests that failed
+;   Returns
+;     AX - non-zero if all tests succeeded, 0 if one or more tests failed
+; ------------------------------------------------------------------------------
+
+; 0x76d0
+; str_os_malloc:
+;     db 'os_malloc', 0
+~6f ~73 ~5f ~6d ~61 ~6c ~6c ~6f   ~63 ~00
+
+; times 0x76e0 - ($ - $$) db 0
+                                          ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x76e0
+; test_os_malloc:
+~55             ; push bp
+~89 ~e5         ; mov bp, sp
+~83 ~ec ~08     ; sub sp, 8                   ; int test_number, unused,
+                                              ; int pass_count, int fail_count
+
+~c7 ~46 ~fe ~01 ~00 ; mov word [bp - 2], 1    ; test_number = 1
+~c7 ~46 ~fa ~00 ~00 ; mov word [bp - 6], 0    ; pass_count = 0
+~c7 ~46 ~f8 ~00 ~00 ; mov word [bp - 8], 0    ; fail_count = 0
+
+~53             ; push bx
+
+~68 ~d0 ~76     ; push str_os_malloc
+~b8 ~06 ~00     ; mov ax, os_print_line
+~ff ~d0         ; call ax
+~83 ~c4 ~02     ; add sp, 2
+
+    ; --------------------------------------------------------------------------
+    ; Test 1 - allocating a blocks of memory should return the correct addresses
+
+; .test1:
+~6a ~04         ; push 4                      ; size
+~b8 ~33 ~00     ; mov ax, os_malloc
+~ff ~d0         ; call ax
+~83 ~c4 ~02     ; add sp, 2
+~83 ~f8 ~02     ; cmp ax, 2                   ; return should be starting address
+~75 ~1a         ; jne .test1_fail
+
+~6a ~1c         ; push 28                     ; size
+~b8 ~33 ~00     ; mov ax, os_malloc
+~ff ~d0         ; call ax
+~83 ~c4 ~02     ; add sp, 2
+~83 ~f8 ~06     ; cmp ax, 6                   ; address should be 0x3000:0006
+~75 ~0b         ; jne .test1_fail
+
+~ff ~46 ~fa     ; inc word [bp - 6]           ; pass_count++
+~b8 ~01 ~00     ; mov ax, 1
+~e8 ~12 ~00     ; call .print_test1_result
+~eb ~1d         ; jmp .test2
+; .test1_fail:
+~ba ~1b ~00     ; mov dx, os_print_registers
+~ff ~d2         ; call dx
+~ff ~46 ~f8     ; inc word [bp - 8]           ; fail_count++
+~b8 ~00 ~00     ; mov ax, 0
+~e8 ~02 ~00     ; call .print_test1_result
+~fa             ; cli
+~f4             ; hlt
+; .print_test1_result:
+~50             ; push ax                     ; passed
+~ff ~76 ~fe     ; push word [bp - 2]          ; test_number
+~b8 ~40 ~72     ; mov ax, print_test_number
+~ff ~d0         ; call ax
+~83 ~c4 ~04     ; add sp, 4
+~c3             ; ret
+
+
+    ; --------------------------------------------------------------------------
+    ; Test 2 - allocating a block of memory that exceeds the remaining space
+    ;          should return NULL
+
+; .test2:
+~ff ~46 ~fe     ; inc word [bp - 2]           ; test_number++
+~89 ~eb         ; mov bx, bp
+
+~68 ~ff ~ff     ; push 0xffff                 ; size
+~b8 ~33 ~00     ; mov ax, os_malloc
+~ff ~d0         ; call ax
+~83 ~c4 ~02     ; add sp, 2
+
+~83 ~f8 ~00     ; cmp ax, 0                   ; address should be NULL
+~75 ~0b         ; jne .test2_fail
+~ff ~46 ~fa     ; inc word [bp - 6]           ; pass_count++
+~b8 ~01 ~00     ; mov ax, 1
+~e8 ~12 ~00     ; call .print_test2_result
+~eb ~1d         ; jmp .return_counts
+; .test2_fail:
+~ba ~1b ~00     ; mov dx, os_print_registers
+~ff ~d2         ; call dx
+~ff ~46 ~f8     ; inc word [bp - 8]           ; fail_count++
+~b8 ~00 ~00     ; mov ax, 0
+~e8 ~02 ~00     ; call .print_test2_result
+~fa             ; cli
+~f4             ; hlt
+; .print_test2_result:
+~50             ; push ax                     ; passed
+~ff ~76 ~fe     ; push word [bp - 2]          ; test_number
+~b8 ~40 ~72     ; mov ax, print_test_number
+~ff ~d0         ; call ax
+~83 ~c4 ~04     ; add sp, 4
+~c3             ; ret
+
+; .return_counts:
+~8b ~46 ~fa     ; mov ax, [bp - 6]            ; AX = pass_count
+~8b ~5e ~04     ; mov bx, [bp + 4]            ; BX = &pass_count (arg)
+~01 ~07         ; add [bx], ax                ; *pass_count (arg) += pass_count
+~8b ~46 ~f8     ; mov ax, [bp - 8]            ; AX = fail_count
+~8b ~5e ~06     ; mov bx, [bp + 6]            ; BX = &fail_count (arg)
+~01 ~07         ; add [bx], ax                ; *fail_count (arg) += fail_count
+~83 ~f8 ~00     ; cmp ax, 0
+~74 ~05         ; je .all_passed
+~b8 ~00 ~00     ; mov ax, 0
+~eb ~03         ; jmp .exit
+; .all_passed:
+~b8 ~01 ~00     ; mov ax, 1
+; .exit:
+~5b             ; pop bx
+~89 ~ec         ; mov sp, bp
+~5d             ; pop bp
+~c3             ; ret
+
+; times 0x730 - ($ - $$) db 0
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+

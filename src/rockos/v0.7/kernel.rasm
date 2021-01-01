@@ -36,10 +36,12 @@
 ~e9 ~43 ~05 ; jmp os_string_to_int              ; 0x2a
 ~e9 ~e0 ~05 ; jmp os_print_int                  ; 0x2d
 ~e9 ~0d ~06 ; jmp os_binary_search              ; 0x30
+~e9 ~ea ~06 ; jmp os_malloc                     ; 0x33
+~e9 ~87 ~07 ; jmp os_free                       ; 0x36
 
 ; times 0x60 - ($ - $$) db 0
 
-            ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                      ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
@@ -1245,5 +1247,101 @@
 ~5d                 ; pop bp
 ~c3                 ; ret
 
-; times 0x06a0 - ($ - $$) db 0
+; times 0x0710 - ($ - $$) db 0
                                               ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x0710
+; ------------------------------------------------------------------------------
+; Global variables related to os_malloc and os_free
+; ------------------------------------------------------------------------------
+
+; Contains the next free memory address
+~02 ~00         ; g_heap_pos:               dw 0x0002
+
+; times 0x0720 - ($ - $$) db 0
+        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x0720
+; ------------------------------------------------------------------------------
+; os_malloc(size)
+;   Allocates memory blocks from the heap. The heap starts at 0x3000:0000, so
+;   make sure to set the DS or ES registers before calling other OS functions
+;   that use lods or stos.
+;
+;   Input
+;     size - bytes to allocate
+;
+;   Returns
+;     AX - address of the allocated memory, 0 if there is insufficient space
+; ------------------------------------------------------------------------------
+
+; os_malloc:
+~55             ; push bp
+~89 ~e5         ; mov bp, sp
+~83 ~ec ~02     ; sub sp, 2                   ; void* allocated_address
+
+~a1 ~10 ~07     ; mov ax, [g_heap_pos]
+~89 ~46 ~fe     ; mov [bp - 2], ax            ; allocated_address = g_heap_pos
+
+    ; check to see if there's enough space
+~03 ~46 ~04     ; add ax, [bp + 4]            ; AX += size
+~72 ~0c         ; jc .insufficient_space      ; a carry (CF=1) means an overflow
+                                              ; in unsigned math
+
+    ; grow the used space
+~8b ~46 ~04     ; mov ax, [bp + 4]            ; AX = size
+~01 ~06 ~10 ~07 ; add [g_heap_pos], ax        ; g_heap_pos += size
+
+    ; return the allocated address
+~8b ~46 ~fe     ; mov ax, [bp - 2]            ; AX = allocated_address
+~eb ~03         ; jmp .exit
+; .insufficient_space:
+~b8 ~00 ~00     ; mov ax, 0
+;.exit:
+~89 ~ec         ; mov sp, bp
+~5d             ; pop bp
+~c3             ; ret
+
+; times 0x7c0 - ($ - $$) db 0
+        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x07c0
+; ------------------------------------------------------------------------------
+; os_free(*mem_block)
+;   Deallocates or frees a block of memory.
+;
+;   Input
+;     *mem_block - previously allocated memory block to be freed
+;
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_free:
+~55             ; push bp
+~89 ~e5         ; mov bp, sp
+; Right now this does nothing. Eventually we need to implement it.
+~89 ~ec         ; mov sp, bp
+~5d             ; pop bp
+~c3             ; ret
+
+; times 0x820 - ($ - $$) db 0
+                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x0820
