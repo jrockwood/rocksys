@@ -515,7 +515,8 @@
 ~ff ~46 ~f8     ; inc word [bp - 8]   ; fail_count++
 ~b8 ~00 ~00     ; mov ax, 0
 ~e8 ~02 ~00     ; call .print_test_result
-~eb ~0d         ; jmp .test2
+~fa             ; cli
+~f4             ; hlt
 
 ; .print_test_result:
 ~50             ; push ax              ; passed
@@ -565,7 +566,8 @@
 ~ff ~46 ~f8     ; inc word [bp - 8]   ; fail_count++
 ~b8 ~00 ~00     ; mov ax, 0
 ~e8 ~02 ~00     ; call .print_test2_result
-~eb ~0d         ; jmp .test3
+~fa             ; cli
+~f4             ; hlt
 ; .print_test2_result:
 ~50             ; push ax              ; passed
 ~ff ~76 ~fe     ; push word [bp - 2]   ; test_number
@@ -614,7 +616,8 @@
 ~ff ~46 ~f8     ; inc word [bp - 8]   ; fail_count++
 ~b8 ~00 ~00     ; mov ax, 0
 ~e8 ~02 ~00     ; call .print_test3_result
-~eb ~0d         ; jmp .return_counts
+~fa             ; cli
+~f4             ; hlt
 ; .print_test3_result:
 ~50             ; push ax              ; passed
 ~ff ~76 ~fe     ; push word [bp - 2]   ; test_number
