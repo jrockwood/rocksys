@@ -190,7 +190,7 @@
 ; run_tests:
 ~55             ; push bp
 ~89 ~e5         ; mov bp, sp
-~83 ~ec ~04     ; sub sp, 4               ; int pass_count, int fail_count
+~83 ~ec ~04     ; sub sp, 4                   ; int pass_count, int fail_count
 
 ~c7 ~46 ~fe ~00 ~00 ; mov word [bp - 2], 0    ; pass_count = 0
 ~c7 ~46 ~fc ~00 ~00 ; mov word [bp - 4], 0    ; fail_count = 0
@@ -205,9 +205,9 @@
     ; test os_print_int (and os_string_to_int and os_int_to_string)
 ~89 ~e8         ; mov ax, bp
 ~83 ~e8 ~04     ; sub ax, 4
-~50             ; push ax     ; fail_count = &fail_count
+~50             ; push ax                     ; fail_count = &fail_count
 ~83 ~c0 ~02     ; add ax, 2
-~50             ; push ax     ; pass_count = &pass_count
+~50             ; push ax                     ; pass_count = &pass_count
 ~b8 ~50 ~74     ; mov ax, test_os_print_int
 ~ff ~d0         ; call ax
 ~83 ~c4 ~04     ; add sp, 4
@@ -219,9 +219,9 @@
   ; test_os_binary_search
 ~89 ~e8         ; mov ax, bp
 ~83 ~e8 ~04     ; sub ax, 4
-~50             ; push ax     ; fail_count = &fail_count
+~50             ; push ax                     ; fail_count = &fail_count
 ~83 ~c0 ~02     ; add ax, 2
-~50             ; push ax     ; pass_count = &pass_count
+~50             ; push ax                     ; pass_count = &pass_count
 ~b8 ~20 ~75     ; mov ax, test_os_binary_search
 ~ff ~d0         ; call ax
 ~83 ~c4 ~04     ; add sp, 4
@@ -231,7 +231,7 @@
 ~ff ~d0         ; call ax
 
     ; see if we should print the "All tests passed!" message or a count of the failures
-~8b ~46 ~fc     ; mov ax, [bp - 4]      ; AX = fail_count
+~8b ~46 ~fc     ; mov ax, [bp - 4]            ; AX = fail_count
 ~83 ~f8 ~00     ; cmp ax, 0
 ~75 ~14         ; jne .some_failures
 ~68 ~5d ~70     ; push str_all_tests_passed
@@ -252,7 +252,7 @@
 ~83 ~c4 ~02     ; add sp, 2
 
 ~6a ~67         ; push 'g'
-~ff ~76 ~fe     ; push word [bp - 2]    ; number = pass_count
+~ff ~76 ~fe     ; push word [bp - 2]          ; number = pass_count
 ~b8 ~4e ~00     ; mov ax, os_print_int
 ~ff ~d0         ; call ax
 ~83 ~c4 ~04     ; add sp, 4
@@ -263,7 +263,7 @@
 ~83 ~c4 ~02     ; add sp, 2
 
 ~6a ~67         ; push 'g'
-~ff ~76 ~fc     ; push word [bp - 4]    ; number = fail_count
+~ff ~76 ~fc     ; push word [bp - 4]          ; number = fail_count
 ~b8 ~4e ~00     ; mov ax, os_print_int
 ~ff ~d0         ; call ax
 ~83 ~c4 ~04     ; add sp, 4
