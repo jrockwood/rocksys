@@ -111,9 +111,9 @@ caller:
 
 ---
 
-### Algorithms
+## Algorithms
 
-#### `os_binary_search(*key, *base, num, width, *compare, **insertion_address)`
+### `os_binary_search(*key, *base, num, width, *compare, **insertion_address)`
 
 > Performs a binary search of a sorted array.
 
@@ -122,7 +122,7 @@ parameter is a pointer to the place in which the element should be inserted if
 the element is not found. The rest of the function declaration matches the C
 runtime function.
 
-##### C Declaration
+#### C Declaration
 
 ```c
 void *bsearch(
@@ -135,7 +135,7 @@ void *bsearch(
 )
 ```
 
-##### Call Information
+#### Call Information
 
 - **Address** - `0x2D`
 - **Returns**
@@ -231,7 +231,7 @@ void *malloc(size_t size);
 
 ---
 
-### Screen
+## Screen
 
 ### `os_print_char(char)`
 
