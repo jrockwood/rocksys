@@ -98,6 +98,14 @@
 
 ~fa         ; cli                 ; disable interrupts
 ~8c ~c8     ; mov ax, cs
+
+    ; --------------------------------------------------------------------------
+    ; Create the heap at 0x3000:0000 by having the DS and ES segment registers
+    ; point to it. It will grow in size by moving up in memory addresses. We
+    ; don't currently use the FS or GS segment registers, but point then to the
+    ; heap also.
+
+~b8 ~00 ~30 ; mov ax, 0x3000
 ~8e ~d8     ; mov ds, ax
 ~8e ~c0     ; mov es, ax
 ~8e ~e0     ; mov fs, ax
@@ -111,10 +119,18 @@
 ~bc ~ff ~ff ; mov sp, 0xffff
 ~fb         ; sti                 ; restore interrupts
 
+    ; --------------------------------------------------------------------------
+    ; Print the banner.
+
+~1e         ; push ds             ; the string is in the CS segment, so change
+~8c ~c8     ; mov ax, cs          ; the DS segment temporarily to point to the
+~8e ~d8     ; mov ds, ax          ; CS segment.
 ~68 ~60 ~00 ; push str_starting_kernel
 ~b8 ~06 ~00 ; mov ax, os_print_line
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
+~1f         ; pop ds
+
 ~b8 ~09 ~00 ; mov ax, os_print_newline
 ~ff ~d0     ; call ax
 
@@ -122,12 +138,16 @@
     ; Load the program code from the 57th sector to address 0x2000:7000 and then
     ; start executing it. Load 28K worth of program binary code.
 
+~06         ; push es             ; the dest address is in the CS segment, so
+~8c ~c8     ; mov ax, cs          ; change the DS segment temporarily to point
+~8e ~c0     ; mov es, ax          ; to the CS segment.
 ~68 ~00 ~70 ; push 0x7000         ; dest_address = 0x2000:7000
 ~6a ~38     ; push byte 56        ; sector_count
 ~6a ~39     ; push byte 57        ; sector_number
 ~b8 ~21 ~00 ; mov ax, os_read_sectors
 ~ff ~d0     ; call ax
 ~83 ~c4 ~06 ; add sp, 6
+~07         ; pop es
 ~bb ~00 ~70 ; mov bx, 0x7000
 ~ff ~d3     ; call bx
 
@@ -136,18 +156,22 @@
 
 ~b8 ~09 ~00 ; mov ax, os_print_newline
 ~ff ~d0     ; call ax
+
+~1e         ; push ds             ; the string is in the CS segment, so change
+~8c ~c8     ; mov ax, cs          ; the DS segment temporarily to point to the
+~8e ~d8     ; mov ds, ax          ; CS segment.
 ~68 ~73 ~00 ; push str_exiting
 ~b8 ~06 ~00 ; mov ax, os_print_line
 ~ff ~d0     ; call ax
 ~83 ~c4 ~02 ; add sp, 2
+~1f         ; pop ds
+
 ~fa         ; cli
 ~f4         ; hlt
 
 ; Start the system calls at 0x01a0.
 ; times 0x01a0 - ($ - $$) db 0
-
-                                          ~00 ~00 ~00 ~00 ~00 ~00
-~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                                              ~00
 
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -165,7 +189,6 @@
 ;
 ;   Input
 ;     str - null terminated string to print (DS segment)
-;     DS  - points to the source segment for `str`
 ;
 ;   Returns
 ;     Nothing
@@ -201,7 +224,7 @@
 ;   Prints a string to the console, followed by a CR/LF combination.
 ;
 ;   Input
-;     str - null terminated string to print
+;     str - null terminated string to print (DS segment)
 ;
 ;   Returns
 ;     Nothing
@@ -391,7 +414,8 @@
 ;
 ;   Input
 ;     word                - the word to print
-;     should_print_prefix - non-zero if the '0x' prefix should be printed, 0 if no prefix
+;     should_print_prefix - non-zero if the '0x' prefix should be printed,
+;                           0 if no prefix
 ; ------------------------------------------------------------------------------
 
 ; os_print_hex_word:
@@ -433,6 +457,10 @@
 ~55         ; push bp
 ~89 ~e5     ; mov bp, sp
 ~60         ; pusha
+
+~1e         ; push ds             ; the string is in the CS segment, so change
+~8c ~c8     ; mov ax, cs          ; the DS segment temporarily to point to the
+~8e ~d8     ; mov ds, ax          ; CS segment.
 
     ; Push the registers we want to print in reverse order.
 ~55         ; push bp
@@ -487,21 +515,23 @@
 ~b8 ~09 ~00 ; mov ax, os_print_newline
 ~ff ~d0     ; call ax
 
+~1f         ; pop ds
+
 ~61         ; popa
 ~89 ~ec     ; mov sp, bp
 ~5d         ; pop bp
 ~c3         ; ret
 
 ; times 0x340 - ($ - $$) db 0
-                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                                      ~00 ~00 ~00
 
 ; 0x340
 ; ------------------------------------------------------------------------------
-; os_print_memory(address, line_count)
+; os_print_memory(*address, line_count)
 ;   Prints the contents of memory at the specified address. Useful for debugging.
 ;
 ; Input
-;   address    - the address of the memory to print
+;   address    - the address of the memory to print; uses the DS segment
 ;   line_count - the number of lines of 8 bytes to print
 ; ------------------------------------------------------------------------------
 
@@ -555,13 +585,13 @@
 
 ; 0x390
 ; ------------------------------------------------------------------------------
-; os_read_sectors(sector_number, sector_count, dest_address)
+; os_read_sectors(sector_number, sector_count, *dest_address)
 ;   Reads the number of sectors from the floppy disk to the target address.
 ;
 ;   Input
 ;     sector_number - logical sector number to read (0-based)
 ;     sector_count  - number of sectors to read
-;     dest_address  - destination address
+;     *dest_address - destination address; uses the ES segment
 ;   Returns
 ;     AH - error code
 ;     AL - 1 if successful, 0 if error
@@ -588,14 +618,14 @@
 
 ; 0x3b0
 ; ------------------------------------------------------------------------------
-; os_write_sectors(sector_number, sector_count, source_address)
+; os_write_sectors(sector_number, sector_count, *source_address)
 ;   Writes sector_count number of sectors from source_address to disk starting
 ;   at sector_number.
 ;
 ;   Input
-;     sector_number  - logical sector number to write (0-based)
-;     sector_count   - number of sectors to write
-;     source_address - source address
+;     sector_number   - logical sector number to write (0-based)
+;     sector_count    - number of sectors to write
+;     *source_address - source address; uses the DS segment
 ;   Returns
 ;     AH - error code
 ;     AL - 1 if successful, 0 if error
@@ -605,6 +635,10 @@
 ~55         ; push bp
 ~89 ~e5     ; mov bp, sp
 
+~06         ; push es             ; set ES=DS
+~8c ~d8     ; mov ax, ds
+~8e ~c0     ; mov es, ax
+
 ~6a ~00     ; push 0              ; is_read
 ~ff ~76 ~08 ; push word [bp + 8]  ; address
 ~ff ~76 ~06 ; push word [bp + 6]  ; sector_count
@@ -613,12 +647,13 @@
 ~ff ~d0     ; call ax
 ~83 ~c4 ~08 ; add sp, 8
 
+~07         ; pop es
+
 ~89 ~ec     ; mov sp, bp
 ~5d         ; pop bp
 ~c3         ; ret
 
 ; times 0x3d0 - ($ - $$) db 0
-                                          ~00 ~00 ~00 ~00 ~00 ~00
 
 ; 0x3d0
 ; ------------------------------------------------------------------------------
@@ -654,13 +689,13 @@
 
 ; 0x3f0
 ; ------------------------------------------------------------------------------
-; _read_write_sectors(sector_number, sector_count, address, is_read)
+; _read_write_sectors(sector_number, sector_count, *dest_address, is_read)
 ;   Reads the number of sectors from the floppy disk to the target address.
 ;
 ;   Input
 ;     sector_number - logical sector number to read (0-based)
 ;     sector_count  - number of sectors to read
-;     dest_address  - destination address
+;     dest_address  - destination address; uses the ES segment
 ;     is_read       - 1 if a read operation should be performed, 0 if a write
 ;   Returns
 ;     AH - error code
@@ -696,9 +731,11 @@
 ~83 ~7e ~0a ~00 ; cmp word [bp + 10], 0   ; if (!is_read) do_write
 ~74 ~04     ; je .do_write
 ~b4 ~02     ; mov ah, 2           ; INT 13h, AH=02h: read sectors from drive
+                                  ; into ES:BX
 ~eb ~02     ; jmp .do_disk_op
 ; .do_write:
 ~b4 ~03     ; mov ah, 3           ; INT 13h, AH=03h: write sectors to drive
+                                  ; from ES:BX
 ; .do_disk_op:
 ~b0 ~01     ; mov al, 1           ; read/write one sector
 ~cd ~13     ; int 0x13
@@ -1066,26 +1103,35 @@
 ; os_print_int:
 ~55             ; push bp
 ~89 ~e5         ; mov bp, sp
-~83 ~ec ~08     ; sub sp, 8               ; char[8] buffer
+~83 ~ec ~08     ; sub sp, 8                   ; char[8] buffer
 
-~54             ; push sp                 ; buffer = &buffer
-~ff ~76 ~06     ; push word [bp + 6]      ; format = format
-~ff ~76 ~04     ; push word [bp + 4]      ; number = number
-~b8 ~27 ~00     ; mov ax, 0x27            ; os_int_to_string
+~1e             ; push ds                     ; the buffer is in the CS segment,
+~06             ; push es
+~8c ~c8         ; mov ax, cs                  ; so change the DS and ES segments
+~8e ~d8         ; mov ds, ax                  ; temporarily to point to CS.
+~8e ~c0         ; mov es, ax                  ; temporarily to point to CS.
+
+~54             ; push sp                     ; buffer = &buffer
+~ff ~76 ~06     ; push word [bp + 6]          ; format = format
+~ff ~76 ~04     ; push word [bp + 4]          ; number = number
+~b8 ~27 ~00     ; mov ax, os_int_to_string
 ~ff ~d0         ; call ax
 ~83 ~c4 ~06     ; add sp, 6
 
-~54             ; push sp                 ; buffer = &buffer
-~b8 ~03 ~00     ; mov ax, 0x03            ; os_print_string
+~54             ; push sp                     ; buffer = &buffer
+~b8 ~03 ~00     ; mov ax, os_print_string
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
+
+~07             ; pop es
+~1f             ; pop ds
 
 ~89 ~ec         ; mov sp, bp
 ~5d             ; pop bp
 ~c3             ; ret
 
 ; times 0x640 - ($ - $$) db 0
-        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                                  ~00 ~00 ~00 ~00
 
 ; 0x0640
 ; ------------------------------------------------------------------------------
@@ -1281,17 +1327,17 @@
 ~89 ~e5         ; mov bp, sp
 ~83 ~ec ~02     ; sub sp, 2                   ; void* allocated_address
 
-~a1 ~10 ~07     ; mov ax, [g_heap_pos]
+~2e ~a1 ~10 ~07 ; mov ax, [cs:g_heap_pos]
 ~89 ~46 ~fe     ; mov [bp - 2], ax            ; allocated_address = g_heap_pos
 
     ; check to see if there's enough space
 ~03 ~46 ~04     ; add ax, [bp + 4]            ; AX += size
-~72 ~0c         ; jc .insufficient_space      ; a carry (CF=1) means an overflow
+~72 ~0d         ; jc .insufficient_space      ; a carry (CF=1) means an overflow
                                               ; in unsigned math
 
     ; grow the used space
 ~8b ~46 ~04     ; mov ax, [bp + 4]            ; AX = size
-~01 ~06 ~10 ~07 ; add [g_heap_pos], ax        ; g_heap_pos += size
+~2e ~01 ~06 ~10 ~07 ; add [cs:g_heap_pos], ax     ; g_heap_pos += size
 
     ; return the allocated address
 ~8b ~46 ~fe     ; mov ax, [bp - 2]            ; AX = allocated_address
@@ -1304,7 +1350,7 @@
 ~c3             ; ret
 
 ; times 0x7c0 - ($ - $$) db 0
-        ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                        ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -1334,7 +1380,7 @@
 ~5d             ; pop bp
 ~c3             ; ret
 
-; times 0x820 - ($ - $$) db 0
+; times 0x830 - ($ - $$) db 0
                             ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -1344,4 +1390,4 @@
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x0820
+; 0x0830

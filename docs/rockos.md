@@ -28,19 +28,28 @@ The bootloader is fairly small and does the following:
 
 ## Memory Map
 
+We are using a memory map that will make it easy for us to manually calculate
+offsets and memory locations. The easiest memory model would be to have
+everything fit into a single segment of 64KB so that we can set all of the
+segment registers to the same value. In fact, this is the memory model that is
+used all the way until v0.7 of the OS. In v0.7, however, more memory was needed
+so we switched to the next best memory model, which is having the code reside in
+a single segment (`0x2000:0000`) and the data reside in another segment
+(`0x3000:0000`).
+
 We'll use the memory from `0x2000:0000` to `0x2000:FFFF` for our kernel and
-assembler. The memory map for this section is below, which is 64KB of total
-memory, or in other words a single segment. We use another 64KB segment for our
+assembler source code (the `CS` segment) and the stack (`SS` segment), and fit
+it into a single segment, which is 64KB. We use another 64KB segment for our
 heap, which is dynamically allocated memory for the kernel and assembler.
 
 _Note:_ The address is a half-open range, not including the ending number
 
-| Address            | Size  | Description                   |
-| ------------------ | ----- | ----------------------------- |
-| `0x3000:0000-FFFF` | 64 KB | Heap                          |
-| `0x2000:E000-FFFF` | 8 KB  | Stack, growing down in memory |
-| `0x2000:7000-E000` | 28 KB | Assembler executable code     |
-| `0x2000:0000-7000` | 28 KB | Kernel executable code        |
+| Address            | Size  | Registers | Description                   |
+| ------------------ | ----- | --------- | ----------------------------- |
+| `0x3000:0000-FFFF` | 64 KB | DS, ES    | Heap                          |
+| `0x2000:E000-FFFF` | 8 KB  | SS        | Stack, growing down in memory |
+| `0x2000:7000-E000` | 28 KB | CS        | Assembler executable code     |
+| `0x2000:0000-7000` | 28 KB | CS        | Kernel executable code        |
 
 Note that this memory map is the one used starting from version 0.7. Previous
 versions used a smaller memory map that fit into a single segment, which is also

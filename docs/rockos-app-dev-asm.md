@@ -172,11 +172,11 @@ void *bsearch(
 - **Parameters**
   - `sector_number` - logical sector number to read (0-based)
   - `sector_count` - number of sectors to read
-  - `*dest_address` - destination address
+  - `*dest_address` - destination address; uses the `ES` segment
 
 ### `os_write_sectors(sector_number, sector_count, *source_address)`
 
-> Reads the number of sectors from the floppy disk to the target address.
+> Writes the number of sectors from the source address to the floppy disk
 
 - **Address** - `0x24`
 - **Returns**
@@ -185,7 +185,7 @@ void *bsearch(
 - **Parameters**
   - `sector_number` - logical sector number to write (0-based)
   - `sector_count` - number of sectors to write
-  - `*source_address` - source address
+  - `*source_address` - source address; uses the `DS` segment
 
 ---
 
@@ -212,8 +212,8 @@ void free(void *memblock);
 
 > Allocates memory blocks from the heap.
 
-The heap starts at `0x3000:0000`, so make sure to set the DS or ES registers
-before calling other OS functions that use `lods` or `stos`.
+The heap starts at `0x3000:0000`. The `DS`, `ES`, `FS`, and `GS` segment
+registers are already set to the heap during OS initialization.
 
 #### C Declaration
 
@@ -308,7 +308,7 @@ The format can be one of the following values:
 - **Address** - `0x1E`
 - **Returns** - Nothing
 - **Parameters**
-  - `*address` - the address of the memory to print
+  - `*address` - the address of the memory to print; uses the `DS` segment
   - `line_count` - the number of lines of 8 bytes to print
 
 ### `os_print_newline()`
@@ -342,7 +342,7 @@ The format can be one of the following values:
 - **Address** - `0x03`
 - **Returns** - Nothing
 - **Parameters**
-  - `str` - address of string
+  - `str` - address of string; uses the `DS` segment
 
 ---
 
@@ -358,7 +358,8 @@ The format can be one of the following values:
 - **Parameters**
   - `number` - number to convert
   - `format` - see the note below for formats
-  - `*buffer` - memory address containing space for at least 7 characters
+  - `*buffer` - memory address containing space for at least 7 characters; uses
+    the `ES` segment
 
 The format can be one of the following values:
 
@@ -378,7 +379,8 @@ The format can be one of the following values:
   - `AX` - the converted number
   - `DX` - 1 if successful, 0 if the format is invalid.
 - **Parameters**
-  - `string` - address of a null-terminated string to convert
+  - `string` - address of a null-terminated string to convert; uses the `DS`
+    segment
   - `format` - see the note below for formats
 
 The format can be one of the following values:

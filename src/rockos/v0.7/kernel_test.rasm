@@ -106,12 +106,16 @@
     ; --------------------------------------------------------------------------
     ; Display the banner
 
+~1e             ; push ds
+~8c ~c8         ; mov ax, cs
+~8e ~d8         ; mov ds, ax
 ~68 ~40 ~70     ; push str_banner
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
 ~b8 ~09 ~00     ; mov ax, os_print_newline
 ~ff ~d0         ; call ax
+~1f             ; pop ds
 
     ; --------------------------------------------------------------------------
     ; Run the tests
@@ -123,7 +127,7 @@
 ~c3             ; ret
 
 ; times 0x240 - ($ - $$) db 0
-                        ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                                  ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
@@ -142,6 +146,11 @@
 ; print_test_number:
 ~55             ; push bp
 ~89 ~e5         ; mov bp, sp
+
+    ; set the DS segment to point to CS
+~1e             ; push ds
+~8c ~c8         ; mov ax, cs
+~8e ~d8         ; mov ds, ax
 
     ; print the prefix
 ~68 ~6f ~70     ; push str_test_number
@@ -169,12 +178,13 @@
 ~83 ~c4 ~02     ; add sp, 2
 
 ; .exit:
+~1f             ; pop ds
 ~89 ~ec         ; mov sp, bp
 ~5d             ; pop bp
 ~c3             ; ret
 
 ; times 0x280 - ($ - $$) db 0
-                    ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                              ~00 ~00 ~00 ~00 ~00
 
 ; 0x7280
 ; ------------------------------------------------------------------------------
@@ -195,12 +205,16 @@
 ~c7 ~46 ~fe ~00 ~00 ; mov word [bp - 2], 0    ; pass_count = 0
 ~c7 ~46 ~fc ~00 ~00 ; mov word [bp - 4], 0    ; fail_count = 0
 
+~1e             ; push ds
+~8c ~c8         ; mov ax, cs
+~8e ~d8         ; mov ds, ax
 ~68 ~52 ~70     ; push str_running
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
 ~b8 ~09 ~00     ; mov ax, os_print_newline
 ~ff ~d0         ; call ax
+~1f             ; pop ds
 
     ; test os_print_int (and os_string_to_int and os_int_to_string)
 ~89 ~e8         ; mov ax, bp
@@ -247,19 +261,27 @@
     ; see if we should print the "All tests passed!" message or a count of the failures
 ~8b ~46 ~fc     ; mov ax, [bp - 4]            ; AX = fail_count
 ~83 ~f8 ~00     ; cmp ax, 0
-~75 ~14         ; jne .some_failures
+~75 ~1a         ; jne .some_failures
+~1e             ; push ds
+~8c ~c8         ; mov ax, cs
+~8e ~d8         ; mov ds, ax
 ~68 ~5d ~70     ; push str_all_tests_passed
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
 ~b8 ~09 ~00     ; mov ax, os_print_newline
 ~ff ~d0         ; call ax
+~1f             ; pop ds
+
 ~89 ~ec         ; mov sp, bp
 ~5d             ; pop bp
 ~c3             ; ret
 
 ;.some_failures:
     ; print "Done: x passes, y failures"
+~1e             ; push ds
+~8c ~c8         ; mov ax, cs
+~8e ~d8         ; mov ds, ax
 ~68 ~8b ~70     ; push str_done
 ~b8 ~03 ~00     ; mov ax, os_print_string
 ~ff ~d0         ; call ax
@@ -286,6 +308,7 @@
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
+~1f             ; pop ds
 
     ; print a blank line
 ~b8 ~09 ~00     ; mov ax, os_print_newline
@@ -296,8 +319,7 @@
 ~c3             ; ret
 
 ; times 0x400 - ($ - $$) db 0
-                    ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
-~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
@@ -346,6 +368,10 @@
 ~c7 ~46 ~fe ~01 ~00 ; mov word [bp - 2], 1    ; test_number = 1
 ~c7 ~46 ~fc ~00 ~00 ; mov word [bp - 4], 0    ; pass_count = 0
 ~c7 ~46 ~fa ~00 ~00 ; mov word [bp - 6], 0    ; fail_count = 0
+
+~1e             ; push ds
+~8c ~c8         ; mov ax, cs
+~8e ~d8         ; mov ds, ax
 
 ~68 ~00 ~74     ; push str_os_print_int
 ~b8 ~06 ~00     ; mov ax, os_print_line
@@ -424,12 +450,13 @@
 ~b8 ~09 ~00     ; mov ax, os_print_newline
 ~ff ~d0         ; call ax
 
+~1f             ; pop ds
 ~89 ~ec         ; mov sp, bp
 ~5d             ; pop bp
 ~c3             ; ret
 
 ; times 0x510 - ($ - $$) db 0
-                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                                      ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ; 0x7510
@@ -466,6 +493,10 @@
 ~c7 ~46 ~f8 ~00 ~00 ; mov word [bp - 8], 0    ; fail_count = 0
 
 ~53             ; push bx
+
+~1e             ; push ds             ; change DS to point to CS since our local
+~8c ~c8         ; mov ax, cs          ; data is in the CS segment
+~8e ~d8         ; mov ds, ax
 
 ~68 ~10 ~75     ; push str_os_binary_search
 ~b8 ~06 ~00     ; mov ax, os_print_line
@@ -651,13 +682,14 @@
 ; .all_passed:
 ~b8 ~01 ~00     ; mov ax, 1
 ; .exit:
+~1f             ; pop ds
 ~5b             ; pop bx
 ~89 ~ec         ; mov sp, bp
 ~5d             ; pop bp
 ~c3             ; ret
 
 ; times 0x6a0 - ($ - $$) db 0
-~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                        ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ; 0x76a0
 ; ------------------------------------------------------------------------------
@@ -741,10 +773,14 @@
 
 ~53             ; push bx
 
+~1e             ; push ds
+~8c ~c8         ; mov ax, cs
+~8e ~d8         ; mov ds, ax
 ~68 ~d0 ~76     ; push str_os_malloc
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
+~1f             ; pop ds
 
     ; --------------------------------------------------------------------------
     ; Test 1 - allocating a blocks of memory should return the correct addresses
@@ -839,6 +875,7 @@
 ~5d             ; pop bp
 ~c3             ; ret
 
-; times 0x730 - ($ - $$) db 0
-~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+; times 0x7b0 - ($ - $$) db 0
+                                                  ~00 ~00 ~00 ~00
 
+; 0x77b0

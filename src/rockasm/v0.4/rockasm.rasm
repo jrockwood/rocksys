@@ -89,6 +89,16 @@
 
 ; main:
     ; --------------------------------------------------------------------------
+    ; Set the DS and ES segment registers to point to the CS register since
+    ; most of our memory accesses are within the code segment. This will change
+    ; once we start using dynamic memory from the heap.
+
+~1e         ; push ds
+~8c ~c8     ; mov ax, cs
+~8e ~d8     ; mov ds, ax
+~8e ~c0     ; mov es, ax
+
+    ; --------------------------------------------------------------------------
     ; Display the loading message.
 
 ~68 ~20 ~70 ; push str_banner
@@ -128,10 +138,10 @@
 ~83 ~c4 ~02 ; add sp, 2
 
 ; mainExit:
+~1f         ; pop ds
 ~c3         ; ret
 
 ; times 0x150 - ($ - $$) db 0
-                                  ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ; 0x7150
 ; ------------------------------------------------------------------------------
