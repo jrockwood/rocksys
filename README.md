@@ -63,7 +63,7 @@ So how do you write an assembler without having anything else? You have to
 bootstrap it. See the [Rockwood Assembly](docs/rockasm.md) documentation for
 details on how we do that.
 
-Before we can run an assembler, though, we need a basic boot loader. See the
+Before we can run an assembler, though, we need a basic bootloader. See the
 [Rockwood OS](docs/rockos.md) file for more information.
 
 ## How to follow along

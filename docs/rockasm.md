@@ -31,7 +31,7 @@ kernel the assembler will use the `ret` instruction.
 Additionally, RockOS will expose some functions for us to use in the same
 segment as the assembler so we can simply use a `call` instruction with an
 absolute address and not have to worry about the segment. See the
-[RockOS Application Development Handbook](rock-os-app-dev-asm.md) for details on
+[RockOS Application Development Handbook](rockos-app-dev-asm.md) for details on
 the OS-provided system calls.
 
 ## Version 0.2

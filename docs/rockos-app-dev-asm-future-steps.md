@@ -10,14 +10,14 @@ The first version of RockOS is simple in nature, but fairly limited. It runs in
 entirely in a single segment. That simplifies having to worry about segment
 registers.
 
-### Loading
+## Loading
 
-When the OS loads your program, it will load into address 0x2000:8000. It will
+When the OS loads your program, it will load into address `0x2000:8000`. It will
 also set the necessary segment registers and set up the stack so that you don't
 have to worry about it.
 
 The OS will execute your program by using a `call` instruction to a near
-absolute memory location (0x2000:8000), so in order quit your application and
+absolute memory location (`0x2000:8000`), so in order quit your application and
 return back to the OS, you use the `ret` instruction.
 
 ## System Calls
