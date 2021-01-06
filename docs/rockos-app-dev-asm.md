@@ -159,6 +159,118 @@ void *bsearch(
 
 ---
 
+## Data Structures
+
+### Sorted Array
+
+> A sorted array uses the binary search algorithm to keep elements in sorted
+> order.
+
+#### C Declaration
+
+```c
+struct SortedArray
+{
+  const void *base;
+  const size_t max_count;
+  const size_t width;
+  int (__cdecl *compare)(const void *key, const void *datum);
+  size_t count;
+}
+```
+
+### `os_sorted_array_add(*sorted_array, key, *element)`
+
+> Adds an element to the array in sorted order.
+
+- **Address** - `0x??`
+- **Returns**
+  - `AX` - address of where the element was added, or 0 if the array is full
+- **Parameters**
+  - `*sorted_array` - pointer to a sorted array structure, as previously
+    returned via `os_sorted_array_create`
+  - `key` - key of the element to add
+  - `*element` - pointer to the element to copy to the array
+
+### `os_sorted_array_clear(*sorted_array)`
+
+> Clears all elements from the array.
+
+- **Address** - `0x??`
+- **Returns** - Nothing
+- **Parameters**
+  - `*sorted_array` - pointer to a sorted array structure, as previously
+    returned via `os_sorted_array_create`
+
+### `os_sorted_array_create(*base, max_num, width, *compare)`
+
+> Creates a sorted array data structure that grows and shrinks within a fixed
+> area of memory.
+
+- **Address** - `0x??`
+- **Returns**
+  - `AX` - a pointer to the sorted array structure, or 0 if the sorted array
+    could not be created
+- **Parameters**
+  - `*base` - pointer to the area of memory that will contain the array's data
+  - `max_num` - maximum number of elements
+  - `width` - width of elements in bytes
+  - `*compare` - callback function that compares two elements - the first is a
+    pointer to the key for the search and the second is a pointer to the array
+    element to be compared with the key.
+
+### `os_sorted_array_find(*sorted_array, key)`
+
+> Finds an element in the array.
+
+- **Address** - `0x??`
+- **Returns**
+  - `AX` - address of where the element was found if it exists, or 0 if the
+    element is not found
+- **Parameters**
+  - `*sorted_array` - pointer to a sorted array structure, as previously
+    returned via `os_sorted_array_create`
+  - `key` - object to search for
+
+### `os_sorted_array_iterate(*sorted_array, *callback, *context)`
+
+> Iterates over elements of the array in order by calling a callback function
+> with each element.
+
+The callback function has the following signature:
+
+```c
+bool (__cdecl *callback)(int index, const void *element, void *context)
+```
+
+Returning false from the callback breaks out of the iteration; true indicates
+the iteration should continue.
+
+- **Address** - `0x??`
+- **Returns**
+  - `AX` - the number of iterations performed
+- **Parameters**
+  - `*sorted_array` - pointer to a sorted array structure, as previously
+    returned via `os_sorted_array_create`
+  - `*callback` - callback function that is called on each iteration
+  - `*context` - a user-supplied value that gets passed straight through to the
+    callback
+
+### `os_sorted_array_remove(*sorted_array, key)`
+
+> Removes an element from the array if it exists.
+
+- **Address** - `0x??`
+- **Returns**
+  - `AX` - address of where the element was found if it was removed, or 0 if the
+    element was not found
+- **Parameters**
+  - `*sorted_array` - pointer to a sorted array structure, as previously
+    returned via `os_sorted_array_create`
+  - `key` - object to search for and remove
+
+---
+
 ## Disk
 
 ### `os_read_sectors(sector_number, sector_count, *dest_address)`

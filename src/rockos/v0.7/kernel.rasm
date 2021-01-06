@@ -10,6 +10,7 @@
 ;
 
 ; [BITS 16]               ; Tells the assembler to generate 16 bit code
+; %include "syscalls.inc"
 
 ; start:
 ~e9 ~fd ~00 ; jmp near kernel_main  ; keep to 3 bytes
@@ -20,6 +21,15 @@
 
 ; sys_call_table:
 ; This table contains a lookup of all of the system calls that we expose.
+;
+; To calculate the offset for the jump, take the starting address of the
+; function and subtract 3 * (the number of entries in the table + 1). The +1
+; comes from the initial `jmp near kernel_main` instruction. The number of
+; entries includes the one you're calculating.
+;
+; For example, here's the formula to calculate the offset for os_malloc:
+;   0x720 - (3 * (17 + 1)) = 0x6ea
+
 ~e9 ~9a ~01 ; jmp os_print_string               ; 0x03
 ~e9 ~b7 ~01 ; jmp os_print_line                 ; 0x06
 ~e9 ~d4 ~01 ; jmp os_print_newline              ; 0x09
@@ -38,10 +48,11 @@
 ~e9 ~0d ~06 ; jmp os_binary_search              ; 0x30
 ~e9 ~ea ~06 ; jmp os_malloc                     ; 0x33
 ~e9 ~87 ~07 ; jmp os_free                       ; 0x36
+~e9 ~f4 ~07 ; jmp os_sorted_array_create        ; 0x39
 
 ; times 0x60 - ($ - $$) db 0
 
-                                      ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                                  ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
@@ -78,10 +89,17 @@
 ~20 ~53 ~53 ~3a ~20 ~00 ; str_ss: db ` SS: `, 0
 ~20 ~53 ~50 ~3a ~20 ~00 ; str_sp: db ` SP: `, 0
 
+; 0xce
+; This is a pointer to a buffer of size 8 that is "pre-allocated" on the heap
+; for use in the os_print_int function. It's pre-allocated because os_malloc
+; just starts the heap at offset 8. Note that the heap is at 0x3000:0000. The
+; DS and ES segments point to 0x3000.
+; g_print_int_buffer_ptr: dw 0
+~00 ~00
+
 ; End the data section at the 256th byte (0x100)
 ; times 0x100 - ($ - $$) db 0
 
-                                                          ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -459,8 +477,10 @@
 ~60         ; pusha
 
 ~1e         ; push ds             ; the string is in the CS segment, so change
-~8c ~c8     ; mov ax, cs          ; the DS segment temporarily to point to the
-~8e ~d8     ; mov ds, ax          ; CS segment.
+~50         ; push ax             ; the DS segment temporarily to point to the
+~8c ~c8     ; mov ax, cs          ; CS segment.
+~8e ~d8     ; mov ds, ax
+~58         ; pop ax
 
     ; Push the registers we want to print in reverse order.
 ~55         ; push bp
@@ -523,7 +543,7 @@
 ~c3         ; ret
 
 ; times 0x340 - ($ - $$) db 0
-                                                      ~00 ~00 ~00
+                                                              ~00
 
 ; 0x340
 ; ------------------------------------------------------------------------------
@@ -853,10 +873,10 @@
 ; os_int_to_string:
 ~55         ; push bp
 ~89 ~e5     ; mov bp, sp
-~83 ~ec ~06 ; sub sp, 6                             ; allocate space for local variables
-~c7 ~46 ~fe ~0a ~00 ; mov word [bp - 2], 10         ; radix
-~c7 ~46 ~fc ~57 ~00 ; mov word [bp - 4], 'a' - 10   ; hex_base_char
-~c7 ~46 ~fa ~00 ~00 ; mov word [bp - 6], 0          ; comma_position
+~83 ~ec ~06 ; sub sp, 6                             ; int radix, hex_base_char, comma_position
+~c7 ~46 ~fe ~0a ~00 ; mov word [bp - 2], 10         ; radix = 10
+~c7 ~46 ~fc ~57 ~00 ; mov word [bp - 4], 'a' - 10   ; hex_base_char = 'a' - 10
+~c7 ~46 ~fa ~00 ~00 ; mov word [bp - 6], 0          ; comma_position = 0
 
     ; Set DI to the start of the buffer
 ~8b ~7e ~08 ; mov di, [bp + 8]
@@ -1103,35 +1123,25 @@
 ; os_print_int:
 ~55             ; push bp
 ~89 ~e5         ; mov bp, sp
-~83 ~ec ~08     ; sub sp, 8                   ; char[8] buffer
 
-~1e             ; push ds                     ; the buffer is in the CS segment,
-~06             ; push es
-~8c ~c8         ; mov ax, cs                  ; so change the DS and ES segments
-~8e ~d8         ; mov ds, ax                  ; temporarily to point to CS.
-~8e ~c0         ; mov es, ax                  ; temporarily to point to CS.
-
-~54             ; push sp                     ; buffer = &buffer
-~ff ~76 ~06     ; push word [bp + 6]          ; format = format
-~ff ~76 ~04     ; push word [bp + 4]          ; number = number
+~ff ~36 ~ce ~00 ; push word [g_print_int_buffer_ptr] ; buffer
+~ff ~76 ~06     ; push word [bp + 6]          ; format
+~ff ~76 ~04     ; push word [bp + 4]          ; number
 ~b8 ~27 ~00     ; mov ax, os_int_to_string
 ~ff ~d0         ; call ax
 ~83 ~c4 ~06     ; add sp, 6
 
-~54             ; push sp                     ; buffer = &buffer
+~ff ~36 ~ce ~00 ; push word [g_print_int_buffer_ptr] ; buffer
 ~b8 ~03 ~00     ; mov ax, os_print_string
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
-
-~07             ; pop es
-~1f             ; pop ds
 
 ~89 ~ec         ; mov sp, bp
 ~5d             ; pop bp
 ~c3             ; ret
 
 ; times 0x640 - ($ - $$) db 0
-                                                  ~00 ~00 ~00 ~00
+                    ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ; 0x0640
 ; ------------------------------------------------------------------------------
@@ -1302,8 +1312,9 @@
 ; Global variables related to os_malloc and os_free
 ; ------------------------------------------------------------------------------
 
-; Contains the next free memory address
-~02 ~00         ; g_heap_pos:               dw 0x0002
+; Contains the next free memory address. Start at offset 8 to reserve space for
+; the buffer for os_print_int (see g_print_int_buffer_ptr).
+~08 ~00         ; g_heap_pos:               dw 0x0008
 
 ; times 0x0720 - ($ - $$) db 0
         ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -1337,7 +1348,7 @@
 
     ; grow the used space
 ~8b ~46 ~04     ; mov ax, [bp + 4]            ; AX = size
-~2e ~01 ~06 ~10 ~07 ; add [cs:g_heap_pos], ax     ; g_heap_pos += size
+~2e ~01 ~06 ~10 ~07 ; add [cs:g_heap_pos], ax ; g_heap_pos += size
 
     ; return the allocated address
 ~8b ~46 ~fe     ; mov ax, [bp - 2]            ; AX = allocated_address
@@ -1391,3 +1402,80 @@
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ; 0x0830
+; ------------------------------------------------------------------------------
+; os_sorted_array_create(*base, max_num, width, *compare)
+;   Creates a sorted array data structure that grows and shrinks within a fixed
+;   area of memory.
+;
+;   Input
+;     *base    - pointer to the area of memory that will contain the array's data
+;     max_num  - maximum number of elements
+;     width    - width of elements in bytes
+;     *compare - callback function that compares two elements. The first is a
+;                pointer to the key for the search and the second is a pointer
+;                to the array element to be compared with the key.
+;
+;   Returns
+;     AX - a pointer to the sorted array structure, or 0 if the sorted array
+;          could not be created
+;
+;   struct SortedArray {
+;       const void* base;
+;       const size_t max_count;
+;       const size_t width;
+;       int (__cdecl *compare)(const void* key, const void* datum);
+;       size_t count;
+;   }
+; ------------------------------------------------------------------------------
+
+; os_sorted_array_create:
+~55             ; push bp
+~89 ~e5         ; mov bp, sp
+~83 ~ec ~02     ; sub sp, 2                   ; SortedArray* array
+~53             ; push bx
+
+    ; get some memory
+~6a ~0a         ; push 10                     ; size = sizeof(SortedArray)
+~b8 ~33 ~00     ; mov ax, os_malloc
+~ff ~d0         ; call ax
+~83 ~c4 ~02     ; add sp, 2
+~83 ~f8 ~00     ; cmp ax, 0
+~74 ~24         ; je .exit
+
+    ; initialize the struct
+~89 ~46 ~fe     ; mov [bp - 2], ax            ; array = AX
+~89 ~c3         ; mov bx, ax
+
+    ; array.base = base
+~8b ~46 ~04     ; mov ax, [bp + 4]
+~89 ~07         ; mov [bx], ax
+
+    ; array.max_count = max_num
+~8b ~46 ~06     ; mov ax, [bp + 6]
+~89 ~47 ~02     ; mov [bx + 2], ax
+
+    ; array.width = width
+~8b ~46 ~08     ; mov ax, [bp + 8]
+~89 ~47 ~04     ; mov [bx + 4], ax
+
+    ; array.compare = compare
+~8b ~46 ~0a     ; mov ax, [bp + 10]
+~89 ~47 ~06     ; mov [bx + 6], ax
+
+    ; array.count = 0
+~c7 ~47 ~08 ~00 ~00 ; mov word [bx + 8], 0
+
+    ; return the result
+~8b ~46 ~fe     ; mov ax, [bp - 2]    ; AX = array
+; .exit:
+~5b             ; pop bx
+~89 ~ec         ; mov sp, bp
+~5d             ; pop bp
+~c3             ; ret
+
+; times 0x880 - ($ - $$) db 0
+                                                              ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x0880

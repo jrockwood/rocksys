@@ -258,6 +258,20 @@
 ~b8 ~09 ~00     ; mov ax, os_print_newline
 ~ff ~d0         ; call ax
 
+  ; test_os_sorted_array
+~89 ~e8         ; mov ax, bp
+~83 ~e8 ~04     ; sub ax, 4
+~50             ; push ax                     ; fail_count = &fail_count
+~83 ~c0 ~02     ; add ax, 2
+~50             ; push ax                     ; pass_count = &pass_count
+~b8 ~c0 ~77     ; mov ax, test_os_sorted_array
+~ff ~d0         ; call ax
+~83 ~c4 ~04     ; add sp, 4
+
+    ; print a blank line
+~b8 ~09 ~00     ; mov ax, os_print_newline
+~ff ~d0         ; call ax
+
     ; see if we should print the "All tests passed!" message or a count of the failures
 ~8b ~46 ~fc     ; mov ax, [bp - 4]            ; AX = fail_count
 ~83 ~f8 ~00     ; cmp ax, 0
@@ -319,8 +333,7 @@
 ~c3             ; ret
 
 ; times 0x400 - ($ - $$) db 0
-                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
-~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                                          ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
@@ -389,6 +402,8 @@
 ~b8 ~0f ~00     ; mov ax, os_print_space
 ~ff ~d0         ; call ax
 
+~1f             ; pop ds
+
     ; print 2748
 ~6a ~64         ; push 'd'
 ~68 ~bc ~0a     ; push 0xabc
@@ -398,6 +413,11 @@
 
 ~b8 ~0f ~00     ; mov ax, os_print_space
 ~ff ~d0         ; call ax
+
+; ~ba ~1b ~00     ; mov dx, os_print_registers
+; ~ff ~d2         ; call dx
+; ~fa             ; cli
+; ~f4             ; hlt
 
     ; print 2,748
 ~6a ~67         ; push 'g'
@@ -879,3 +899,103 @@
                                                   ~00 ~00 ~00 ~00
 
 ; 0x77b0
+; ------------------------------------------------------------------------------
+; test_os_sorted_array(int *pass_count, int *fail_count)
+;   Runs the unit tests for os_sorted_array functions.
+;
+;   Input
+;     pass_count - pointer to store the count of tests that passed
+;     fail_count - pointer to store the count of tests that failed
+;   Returns
+;     AX - non-zero if all tests succeeded, 0 if one or more tests failed
+; ------------------------------------------------------------------------------
+
+; 0x77b0
+; str_os_sorted_array:
+;     db 'os_sorted_array', 0
+~6f ~73 ~5f ~73 ~6f ~72 ~74 ~65   ~64 ~5f ~61 ~72 ~72 ~61 ~79 ~00
+
+; 0x77c0
+; test_os_sorted_array:
+~55             ; push bp
+~89 ~e5         ; mov bp, sp
+~83 ~ec ~0b     ; sub sp, 11                  ; int test_number, char* array,
+                                              ; int pass_count, int fail_count
+                                              ; SortedArray *sorted_array, char element
+
+~c7 ~46 ~fe ~01 ~00 ; mov word [bp - 2], 1    ; test_number = 1
+~c7 ~46 ~fa ~00 ~00 ; mov word [bp - 6], 0    ; pass_count = 0
+~c7 ~46 ~f8 ~00 ~00 ; mov word [bp - 8], 0    ; fail_count = 0
+
+~53             ; push bx
+
+~1e             ; push ds
+~8c ~c8         ; mov ax, cs
+~8e ~d8         ; mov ds, ax
+~68 ~b0 ~77     ; push str_os_sorted_array
+~b8 ~06 ~00     ; mov ax, os_print_line
+~ff ~d0         ; call ax
+~83 ~c4 ~02     ; add sp, 2
+~1f             ; pop ds
+
+    ; --------------------------------------------------------------------------
+    ; Allocate some memory for the array of size 3
+
+~6a ~03         ; push 3
+~b8 ~33 ~00     ; mov ax, os_malloc
+~ff ~d0         ; call ax
+~83 ~c4 ~02     ; add sp, 2
+~89 ~46 ~fc     ; mov [bp - 4], ax            ; array = AX
+
+    ; --------------------------------------------------------------------------
+    ; Test 1 - create a new sorted array
+
+~68 ~a0 ~76     ; push byte_compare           ; compare
+~6a ~01         ; push 1                      ; width
+~6a ~03         ; push 3                      ; max_num
+~ff ~76 ~fc     ; push word [bp - 4]          ; base = array
+~b8 ~39 ~00     ; mov ax, os_sorted_array_create
+~ff ~d0         ; call ax
+~83 ~c4 ~08     ; add sp, 8
+~89 ~46 ~f6     ; mov [bp - 10], ax           ; sorted_array = AX
+
+~83 ~f8 ~00     ; cmp ax, 0
+~74 ~0b         ; je .test1_fail
+~ff ~46 ~fa     ; inc word [bp - 6]           ; pass_count++
+~b8 ~01 ~00     ; mov ax, 1
+~e8 ~12 ~00     ; call .print_test1_result
+~eb ~1d         ; jmp .test2
+; .test1_fail:
+~ba ~1b ~00     ; mov dx, os_print_registers
+~ff ~d2         ; call dx
+~ff ~46 ~f8     ; inc word [bp - 8]           ; fail_count++
+~b8 ~00 ~00     ; mov ax, 0
+~e8 ~02 ~00     ; call .print_test1_result
+~fa             ; cli
+~f4             ; hlt
+; .print_test1_result:
+~50             ; push ax                     ; passed
+~ff ~76 ~fe     ; push word [bp - 2]          ; test_number
+~b8 ~50 ~82     ; mov ax, print_test_number
+~ff ~d0         ; call ax
+~83 ~c4 ~04     ; add sp, 4
+~c3             ; ret
+
+; .return_counts:
+~8b ~46 ~fa     ; mov ax, [bp - 6]            ; AX = pass_count
+~8b ~5e ~04     ; mov bx, [bp + 4]            ; BX = &pass_count (arg)
+~01 ~07         ; add [bx], ax                ; *pass_count (arg) += pass_count
+~8b ~46 ~f8     ; mov ax, [bp - 8]            ; AX = fail_count
+~8b ~5e ~06     ; mov bx, [bp + 6]            ; BX = &fail_count (arg)
+~01 ~07         ; add [bx], ax                ; *fail_count (arg) += fail_count
+~83 ~f8 ~00     ; cmp ax, 0
+~74 ~05         ; je .all_passed
+~b8 ~00 ~00     ; mov ax, 0
+~eb ~03         ; jmp .exit
+; .all_passed:
+~b8 ~01 ~00     ; mov ax, 1
+; .exit:
+~5b             ; pop bx
+~89 ~ec         ; mov sp, bp
+~5d             ; pop bp
+~c3             ; ret

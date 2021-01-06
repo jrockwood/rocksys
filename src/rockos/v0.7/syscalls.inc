@@ -32,3 +32,4 @@ os_print_int                equ 0x2d
 os_binary_search            equ 0x30
 os_malloc                   equ 0x33
 os_free                     equ 0x36
+os_sorted_array_create      equ 0x39
