@@ -81,6 +81,8 @@ caller:
   ret
 ```
 
+---
+
 ## API Reference
 
 - **[Disk](#disk)**
@@ -102,9 +104,11 @@ caller:
   - `os_int_to_string`
   - `os_string_to_int`
 
-### Disk
+---
 
-#### `os_read_sectors(sector_number, sector_count, *dest_address)`
+## Disk
+
+### `os_read_sectors(sector_number, sector_count, *dest_address)`
 
 > Reads the number of sectors from the floppy disk to the target address.
 
@@ -117,7 +121,7 @@ caller:
   - `sector_count` - number of sectors to read
   - `*dest_address` - destination address
 
-#### `os_write_sectors(sector_number, sector_count, *source_address)`
+### `os_write_sectors(sector_number, sector_count, *source_address)`
 
 > Reads the number of sectors from the floppy disk to the target address.
 
@@ -134,7 +138,7 @@ caller:
 
 ### Screen
 
-#### `os_print_char(char)`
+### `os_print_char(char)`
 
 > Prints a character to the console.
 
@@ -143,7 +147,7 @@ caller:
 - **Parameters**
   - `char` - character to print
 
-#### `os_print_hex_byte(byte, should_print_prefix)`
+### `os_print_hex_byte(byte, should_print_prefix)`
 
 > Prints the low byte in hexidecimal format, with an optional prefix.
 
@@ -153,7 +157,7 @@ caller:
   - `byte` - byte to print
   - `should_print_prefix` - non-zero if the '0x' prefix should be printed
 
-#### `os_print_hex_nibble(nibble, should_print_prefix)`
+### `os_print_hex_nibble(nibble, should_print_prefix)`
 
 > Prints the low nibble in hexidecimal format, with an optional prefix.
 
@@ -163,7 +167,7 @@ caller:
   - `nibble` - number to print
   - `should_print_prefix` - non-zero if the '0x' prefix should be printed
 
-#### `os_print_hex_word(word, should_print_prefix)`
+### `os_print_hex_word(word, should_print_prefix)`
 
 > Prints the word in hexidecimal format, with an optional prefix.
 
@@ -173,7 +177,7 @@ caller:
   - `word` - number to print
   - `should_print_prefix` - non-zero if the '0x' prefix should be printed
 
-#### `os_print_int(number, format)`
+### `os_print_int(number, format)`
 
 > Prints an integer using a specified format.
 
@@ -192,7 +196,7 @@ The format can be one of the following values:
 - `'0x'` - hexidecimal number with prefix and lower-case letters
 - `'0X'` - hexidecimal number with prefix and upper-case letters
 
-#### `os_print_line(str)`
+### `os_print_line(str)`
 
 > Prints a null-terminated string to the screen followed by a new line sequence
 > (carriage return/line feed combination, CR/LF).
@@ -202,7 +206,7 @@ The format can be one of the following values:
 - **Parameters**
   - `str` - address of string
 
-#### `os_print_memory(*address, line_count)`
+### `os_print_memory(*address, line_count)`
 
 > Prints the contents of memory at the specified address. Useful for debugging.
 
@@ -212,7 +216,7 @@ The format can be one of the following values:
   - `*address` - the address of the memory to print
   - `line_count` - the number of lines of 8 bytes to print
 
-#### `os_print_newline()`
+### `os_print_newline()`
 
 > Prints a new line sequence (carriage return/line feed combination, CR/LF).
 
@@ -220,7 +224,7 @@ The format can be one of the following values:
 - **Returns** - Nothing
 - **Parameters** - None
 
-#### `os_print_registers()`
+### `os_print_registers()`
 
 > Prints all of the general purpose register values. Useful for debugging.
 
@@ -228,7 +232,7 @@ The format can be one of the following values:
 - **Returns** - Nothing
 - **Parameters** - None
 
-#### `os_print_space()`
+### `os_print_space()`
 
 > Prints a space character to the screen.
 
@@ -236,7 +240,7 @@ The format can be one of the following values:
 - **Returns** - Nothing
 - **Parameters** - None
 
-#### `os_print_string(str)`
+### `os_print_string(str)`
 
 > Prints a null-terminated string to the screen.
 
@@ -247,13 +251,11 @@ The format can be one of the following values:
 
 ---
 
-### String
+## String
 
-#### `os_int_to_string(number, format, *buffer)`
+### `os_int_to_string(number, format, *buffer)`
 
 > Converts an integer to a string using a specified format.
-
-#### Call Information
 
 - **Address** - `0x27`
 - **Returns**
@@ -272,7 +274,7 @@ The format can be one of the following values:
 - `'0x'` - hexidecimal number with prefix and lower-case letters
 - `'0X'` - hexidecimal number with prefix and upper-case letters
 
-#### `os_string_to_int(string, format)`
+### `os_string_to_int(string, format)`
 
 > Converts a string into an integer.
 
