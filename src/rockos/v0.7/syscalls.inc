@@ -4,7 +4,7 @@
 ; This file is meant to be included in user programs to be able to make system
 ; calls.
 ;
-; Copyright (c) 2017 Justin Rockwood. All rights reserved.
+; Copyright (c) 2020 Justin Rockwood. All rights reserved.
 ;
 
 ; [BITS 16]               ; Tells the assembler to generate 16 bit code
@@ -29,3 +29,4 @@ os_write_sectors            equ 0x24
 os_int_to_string            equ 0x27
 os_string_to_int            equ 0x2a
 os_print_int                equ 0x2d
+os_binary_search            equ 0x30

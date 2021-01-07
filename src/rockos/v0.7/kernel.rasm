@@ -35,10 +35,11 @@
 ~e9 ~66 ~04 ; jmp os_int_to_string              ; 0x27
 ~e9 ~43 ~05 ; jmp os_string_to_int              ; 0x2a
 ~e9 ~e0 ~05 ; jmp os_print_int                  ; 0x2d
+~e9 ~0d ~06 ; jmp os_binary_search              ; 0x30
 
 ; times 0x60 - ($ - $$) db 0
 
-~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+            ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
@@ -1077,5 +1078,168 @@
 ~5d             ; pop bp
 ~c3             ; ret
 
-; times 0x9a0 - ($ - $$) db 0
+; times 0x640 - ($ - $$) db 0
         ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x0640
+; ------------------------------------------------------------------------------
+; os_binary_search(key, base, num, width, compare, insertion_address)
+;   Performs a binary search of a sorted array. The function diverges slightly
+;   from the C runtime function in that the last parameter is a pointer to the
+;   place in which the element should be inserted if the element is not found.
+;   The rest of the function declaration matches the C runtime function.
+;
+;   Input
+;     key     - object to search for
+;     base    - pointer to base of search data
+;     num     - number of elements
+;     width   - width of elements in bytes
+;     compare - callback function that compares two elements. The first is a
+;               pointer to the key for the search and the second is a pointer to
+;               the array element to be compared with the key. If NULL, the
+;               default comparison function is used, which dereferences the
+;               pointers and compares integers.
+;     insertion_address - (Output) pointer to an address which will contain the
+;               address of either the found element (which matches the
+;               return value), or the place in which the element should be
+;               inserted. Can be NULL if the caller doesn't need the insertion
+;               address.
+;   Returns
+;     AX - a pointer to an occurrence of key in the array pointed to by base.
+;          If key is not found, the function returns NULL. If the array is not
+;          in ascending sort order or contains duplicate records with identical
+;          keys, the result is unpredictable.
+; ------------------------------------------------------------------------------
+
+; C Implementation
+;
+; void* bsearch(
+;   const void* key,
+;   const void* base,
+;   size_t num,
+;   size_t width,
+;   int (__cdecl *compare)(const void* key, const void* datum),
+;   void** insertion_address)
+; {
+;     size_t min, max, mid;
+;     void* datum;
+;     int comparison;
+;
+;     min = 0;
+;     max = num - 1;
+;     mid = max >> 1;
+;     datum = base;
+;     comparison = 1;
+;     while (min <= max && 0 != comparison) {
+;         mid = min + ((max - min) >> 1);
+;         datum = base + (mid * width);
+;         if (NULL != compare) {
+;             comparison = compare(key, datum);
+;         } else {
+;             comparison = *datum - *key;
+;         }
+;
+;         if (comparison > 0) {
+;             min = mid + 1;
+;         } else if (comparison < 0) {
+;             max = mid - 1;
+;         }
+;     }
+;     if (NULL != insertionAddress) {
+;         *insertionAddress = base + (min * width);
+;     }
+;     return comparison == 0 ? datum : NULL;
+; }
+
+; os_binary_search:
+~55                 ; push bp
+~89 ~e5             ; mov bp, sp
+~83 ~ec ~0a         ; sub sp, 10              ; size_t min, max, mid, datum, comparison
+~53                 ; push bx
+~51                 ; push cx
+~52                 ; push dx
+
+~c7 ~46 ~fe ~00 ~00 ; mov word [bp - 2], 0    ; min = 0
+~8b ~46 ~08         ; mov ax, [bp + 8]        ; AX = num
+~83 ~e8 ~01         ; sub ax, 1               ; AX -= 1
+~89 ~46 ~fc         ; mov [bp - 4], ax        ; max = num - 1
+~d1 ~e8             ; shr ax, 1               ; AX = max >> 1
+~89 ~46 ~fa         ; mov [bp - 6], ax        ; mid = max >> 1
+~8b ~46 ~06         ; mov ax, [bp + 6]        ; AX = base
+~89 ~46 ~f8         ; mov [bp - 8], ax        ; datum = base
+~c7 ~46 ~f6 ~01 ~00 ; mov word [bp - 10], 1   ; comparison = 1
+; .loop:
+~8b ~46 ~fe         ; mov ax, [bp - 2]        ; AX = min
+~8b ~5e ~fc         ; mov bx, [bp - 4]        ; BX = max
+~39 ~d8             ; cmp ax, bx              ; min <= max
+~7f ~5f             ; jg .exit_while
+~83 ~7e ~f6 ~00     ; cmp word [bp - 10], 0   ; 0 != comparison
+~74 ~59             ; je .exit_while
+~29 ~c3             ; sub bx, ax              ; BX = max - min
+~d1 ~fb             ; sar bx, 1               ; BX = (max - min) >> 1
+~89 ~c1             ; mov cx, ax
+~01 ~d9             ; add cx, bx              ; CX = min + ((max - min) >> 1)
+~89 ~4e ~fa         ; mov [bp - 6], cx        ; mid = cx
+~89 ~ca             ; mov dx, cx
+~8b ~46 ~0a         ; mov ax, [bp + 10]       ; AX = width
+~0f ~af ~d0         ; imul dx, ax             ; DX = (mid * width)
+~8b ~46 ~06         ; mov ax, [bp + 6]        ; AX = base
+~01 ~c2             ; add dx, ax              ; DX = base + (mid * width)
+~89 ~56 ~f8         ; mov [bp - 8], dx        ; datum = base + (mid * width)
+~8b ~46 ~0c         ; mov ax, [bp + 12]       ; AX = compare
+~8b ~5e ~04         ; mov bx, [bp + 4]        ; BX = key
+~83 ~f8 ~00         ; cmp ax, 0               ; if (compare == NULL) .use_default_compare
+~74 ~09             ; je .use_default_compare
+~52                 ; push dx                 ; datum
+~53                 ; push bx                 ; key
+~ff ~d0             ; call ax                 ; AX = compare(key, datum)
+~83 ~c4 ~04         ; add sp, 4               ; pop off the arguments (__cdecl requires the caller to clean up)
+~eb ~08             ; jmp .store_comparison
+; .use_default_compare:
+~8b ~07             ; mov ax, [bx]            ; AX = *key
+~53                 ; push bx
+~89 ~d3             ; mov bx, dx              ; BX = datum
+~2b ~07             ; sub ax, [bx]            ; AX = *key - *datum (default comparison)
+~5b                 ; pop bx
+; .store_comparison:
+~89 ~46 ~f6         ; mov [bp - 10], ax       ; comparison = compare(key, datum)
+~83 ~f8 ~00         ; cmp ax, 0
+~7f ~04             ; jg .adjust_min
+~7c ~0d             ; jl .adjust_max
+~eb ~ad             ; jmp .loop
+; .adjust_min:
+~8b ~46 ~fa         ; mov ax, [bp - 6]        ; AX = mid
+~83 ~c0 ~01         ; add ax, 1               ; AX = mid + 1
+~89 ~46 ~fe         ; mov [bp - 2], ax        ; min = ax
+~eb ~a2             ; jmp .loop
+; .adjust_max:
+~8b ~46 ~fa         ; mov ax, [bp - 6]        ; AX = mid
+~83 ~e8 ~01         ; sub ax, 1               ; AX = mid - 1
+~89 ~46 ~fc         ; mov [bp - 4], ax        ; max = ax
+~eb ~97             ; jmp .loop
+; .exit_while:
+~8b ~5e ~0e         ; mov bx, [bp + 14]       ; BX = insertion_address
+~83 ~fb ~00         ; cmp bx, 0               ; if (NULL != insertion_address)
+~74 ~0c             ; je .prepare_return_value
+~8b ~46 ~fe         ; mov ax, [bp - 2]        ; AX = min
+~0f ~af ~46 ~0a     ; imul ax, [bp + 10]      ; AX = (min * width)
+~03 ~46 ~06         ; add ax, [bp + 6]        ; AX = base + (min * width)
+~89 ~07             ; mov [bx], ax            ; *insertion_address = base + (min * width)
+; .prepare_return_value:
+~8b ~46 ~f6         ; mov ax, [bp - 10]       ; AX = comparison
+~83 ~7e ~f6 ~00     ; cmp word [bp - 10], 0   ; comparison == 0
+~74 ~04             ; je .return_datum
+~31 ~c0             ; xor ax, ax
+~eb ~03             ; jmp .return
+; .return_datum:
+~8b ~46 ~f8         ; mov ax, [bp - 8]        ; AX = datum
+; .return:
+~5a                 ; pop dx
+~59                 ; pop cx
+~5b                 ; pop bx
+~89 ~ec             ; mov sp, bp
+~5d                 ; pop bp
+~c3                 ; ret
+
+; times 0x06a0 - ($ - $$) db 0
+                                              ~00 ~00 ~00 ~00 ~00

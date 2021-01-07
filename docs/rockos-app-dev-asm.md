@@ -85,6 +85,8 @@ caller:
 
 ## API Reference
 
+- **[Algorithms](#algorithms)**
+  - `os_binary_search`
 - **[Disk](#disk)**
   - `os_read_sectors`
   - `os_write_sectors`
@@ -103,6 +105,54 @@ caller:
 - **[String](#string)**
   - `os_int_to_string`
   - `os_string_to_int`
+
+---
+
+## Algorithms
+
+### `os_binary_search(*key, *base, num, width, *compare, **insertion_address)`
+
+> Performs a binary search of a sorted array.
+
+The function diverges slightly from the C runtime function in that the last
+parameter is a pointer to the place in which the element should be inserted if
+the element is not found. The rest of the function declaration matches the C
+runtime function.
+
+#### C Declaration
+
+```c
+void *bsearch(
+  const void *key,
+  const void *base,
+  size_t num,
+  size_t width,
+  int (__cdecl *compare)(const void *key, const void *datum),
+  intptr_t **insertion_address
+)
+```
+
+#### Call Information
+
+- **Address** - `0x2D`
+- **Returns**
+  - `AX` - a pointer to an occurrence of key in the array pointed to by base. If
+    key is not found, the function returns NULL. If the array is not in
+    ascending sort order or contains duplicate records with identical keys, the
+    result is unpredictable.
+- **Parameters**
+  - `key` - object to search for
+  - `base` - pointer to base of search data
+  - `num` - number of elements
+  - `width` - width of elements in bytes
+  - `compare` - callback function that compares two elements - the first is a
+    pointer to the key for the search and the second is a pointer to the array
+    element to be compared with the key. If NULL, the default comparison
+    function is used, which dereferences the pointers and compares integers.
+  - `insertion_address` - **(Output)** pointer to an address which will contain
+    the address of either the found element (which matches the return value), or
+    the place in which the element should be inserted. Can be NULL if the caller
+    doesn't need the insertion address.
 
 ---
 
