@@ -288,19 +288,31 @@ async function promptForSectorMap(programKind: ProgramKind): Promise<OsFloppySec
     new FloppyDiskSectorRange(kernelSector.endSector + 1, defaultOsFloppySectorMap.programSector.sectorCount),
   );
 
-  let sourceFileSector = new FloppyDiskSectorRange(
-    programSector.endSector + 1,
-    defaultOsFloppySectorMap.sourceFileSector.sectorCount,
-  );
-
-  let assembledFileSector = new FloppyDiskSectorRange(
-    sourceFileSector.endSector + 1,
-    defaultOsFloppySectorMap.assembledFileSector.sectorCount,
-  );
+  let sourceFileSector: FloppyDiskSectorRange;
+  let assembledFileSector: FloppyDiskSectorRange;
 
   if (programKind === 'assembler') {
-    sourceFileSector = await promptForSector('source file', sourceFileSector);
-    assembledFileSector = await promptForSector('output assembled file', assembledFileSector);
+    sourceFileSector = await promptForSector(
+      'source file',
+      new FloppyDiskSectorRange(programSector.endSector + 1, defaultOsFloppySectorMap.sourceFileSector.sectorCount),
+    );
+    assembledFileSector = await promptForSector(
+      'output assembled file',
+      new FloppyDiskSectorRange(
+        sourceFileSector.endSector + 1,
+        defaultOsFloppySectorMap.assembledFileSector.sectorCount,
+      ),
+    );
+  } else {
+    sourceFileSector = new FloppyDiskSectorRange(
+      programSector.endSector + 1,
+      defaultOsFloppySectorMap.sourceFileSector.sectorCount,
+    );
+
+    assembledFileSector = new FloppyDiskSectorRange(
+      sourceFileSector.endSector + 1,
+      defaultOsFloppySectorMap.assembledFileSector.sectorCount,
+    );
   }
 
   return {

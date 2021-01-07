@@ -10,7 +10,7 @@ import {
 } from './disk';
 import { DefaultPrompter, Prompter } from './prompter';
 
-export const sectorsFor28K = 56;
+export const sectorsFor12K = 24;
 export const sectorsFor1MB = 2000;
 
 /**
@@ -19,11 +19,11 @@ export const sectorsFor1MB = 2000;
  *
  * | Logical Sectors | Address             | Description                     |
  * | --------------- | ------------------- | ------------------------------- |
- * | 0               | `0x000000-0x0001FF` | Boot sector                     |
- * | 1-56            | `0x000200-0x0071FF` | Kernel (28K, 56 sectors)        |
- * | 57-112          | `0x007200-0x00E1FF` | Assembler (28K, 56 sectors)     |
- * | 113-2112        | `0x00E200-0x1081FF` | Source File (1MB, 2000 sectors) |
- * | 2113-2168       | `0x108200-0x10F1FF` | Assembled File (written) (28K)  |
+ * | 0               | `0x000000-0x000200` | Boot sector                     |
+ * | 1-24            | `0x000200-0x003200` | Kernel (12K, 24 sectors)        |
+ * | 25-48           | `0x003200-0x006200` | Assembler (12K, 24 sectors)     |
+ * | 49-248          | `0x006200-0x100200` | Source File (1MB, 2000 sectors) |
+ * | 249-272         | `0x100200-0x10F1FF` | Assembled File (written) (12K)  |
  */
 export class OsFloppySectorMap {
   public readonly bootSector: FloppyDiskSectorRange;
@@ -39,14 +39,14 @@ export class OsFloppySectorMap {
     assembledFileSector?: FloppyDiskSectorRange,
   ) {
     this.bootSector = new FloppyDiskSectorRange(0, 1);
-    this.kernelSector = kernelSector || new FloppyDiskSectorRange(1, sectorsFor28K);
-    this.programSector = programSector || new FloppyDiskSectorRange(this.kernelSector.endSector + 1, sectorsFor28K);
+    this.kernelSector = kernelSector || new FloppyDiskSectorRange(1, sectorsFor12K);
+    this.programSector = programSector || new FloppyDiskSectorRange(this.kernelSector.endSector + 1, sectorsFor12K);
 
     this.sourceFileSector =
       sourceFileSector || new FloppyDiskSectorRange(this.programSector.endSector + 1, sectorsFor1MB);
 
     this.assembledFileSector =
-      assembledFileSector || new FloppyDiskSectorRange(this.sourceFileSector.endSector + 1, sectorsFor28K);
+      assembledFileSector || new FloppyDiskSectorRange(this.sourceFileSector.endSector + 1, sectorsFor12K);
   }
 }
 

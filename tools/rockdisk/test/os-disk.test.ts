@@ -124,7 +124,7 @@ describe('OsDisk', () => {
           sectorMap: defaultOsFloppySectorMap,
         });
 
-      expect(action).toThrowError(`The size of '${kernelBinFile}' exceeds the maximum size of 28672.`);
+      expect(action).toThrowError(`The size of '${kernelBinFile}' exceeds the maximum size of 12288.`);
     });
 
     it('should throw if the contents of the assembler section are greater than the allocated space', () => {
@@ -145,7 +145,7 @@ describe('OsDisk', () => {
           sectorMap: defaultOsFloppySectorMap,
         });
 
-      expect(action).toThrowError(`The size of '${assemblerBinFile}' exceeds the maximum size of 28672.`);
+      expect(action).toThrowError(`The size of '${assemblerBinFile}' exceeds the maximum size of 12288.`);
     });
 
     it('should throw if the contents of the source file section are greater than the allocated space', () => {
