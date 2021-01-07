@@ -5,34 +5,72 @@ operating system run from the command line and uses less than 1MB of RAM. Its
 primary focus will be to handle the hardware and provide basic kernel services
 like file system access and memory management.
 
+It will use the hand-built assembler to generate code. See
+[rockasm.md](rockasm.md) for details about the assembler.
+
+## Bootloader
+
+We use a floppy disk to load our OS into memory. The BIOS checks the first
+sector (512 bytes) on the disk for the byte sequence `0x55 0xAA` in bytes 511
+and 512 respectively. When the BIOS finds such a boot sector, it is loaded into
+memory at a specific location, which is usually `0x0000:0x7C00` (segment 0,
+address `0x7C00`). However, some BIOSes load to `0x7C0:0x0000` (segment
+`0x07C0`, offset 0), which resolves to the same physical address. The bootloader
+(src/rockos/vX/bootload.rasm) has code to always set it to `0x0000:0x7C00` for
+ease of programming.
+
+The bootloader is fairly small and does the following:
+
+- Prints a copyright message
+- Creates a stack
+- Loads 12KB of kernel executable code (56 sectors) from the second sector on
+  the disk into memory address `0x2000:0000` and then starts executing it.
+
 ## Memory Map
 
-We'll use the memory from `0x0000:7E00` to `0x2000:FFFF` for our bootloader and
-kernel. The memory map for this section is below, which is 64KB of total memory,
-or in other words a single segment.
+We'll use the memory from `0x2000:0000` to `0x2000:FFFF` for our kernel,
+external program (assembler or kernel unit tests), the heap, and the stack. The
+memory map for this section is below, which is 64KB of total memory, or in other
+words a single segment. Fitting everything into a single segment greatly reduces
+complexity since we don't have to mess with the segmented memory model in real
+mode. It does mean that we'll have to keep a careful eye on the size of our
+kernel and assembler to make sure it doesn't exceed 12 KB, but it should be
+possible since the current size of the kernel (as of v0.6) is only ~2KB. The
+assembler is even smaller (v0.3) at ~1KB.
 
 _Note:_ The address is a half-open range, not including the ending number
 
 | Address            | Size  | Description                   |
 | ------------------ | ----- | ----------------------------- |
 | `0x2000:F000-FFFF` | 4 KB  | Stack, growing down in memory |
-| `0x2000:8000-F000` | 28 KB | Space for external programs   |
-| `0x2000:7000-8000` | 4 KB  | Kernel disk operation buffer  |
-| `0x2000:3000-7000` | 16 KB | Heap                          |
+| `0x2000:6000-F000` | 36 KB | Heap, growing up in memory    |
+| `0x2000:3000-6000` | 12 KB | Program executable code       |
 | `0x2000:0000-3000` | 12 KB | Kernel executable code        |
+
+Note that this memory map is the one used starting from version 0.7. Previous
+versions used a different memory map, which is outlined in version 0.7 below.
 
 ## Sector Map
 
-This is a sector map of what is on the floppy disk (each sector on a floppy
-drive is 512 bytes).
+This is a sector map of what is on the floppy disk. For a standard IBM formatted
+double-sided, high-density 3.5" floppy diskette, the following properties apply:
 
-| Logical Sectors | Address           | Description                     |
-| --------------- | ----------------- | ------------------------------- |
-| 0               | `0x00000-0x001FF` | Boot sector                     |
-| 1-48            | `0x00200-0x061FF` | Kernel (24K, 48 sectors)        |
-| 49-96           | `0x06200-0x0C1FF` | Assembler (24K, 48 sectors)     |
-| 97-1072         | `0x0C200-0x861FF` | Source File (500K, 976 sectors) |
-| 1073-1121       | `0x86200-0x8C3FF` | Assembled File (written) (24K)  |
+- Data is recorded on two sides of the disk
+- Each side has 80 tracks
+- Each track has 18 sectors
+- Each sector holds 512 bytes (0.5 KB)
+
+So each floppy disk holds 2880 sectors (2 \* 80 \* 18), which total to 1440 KB.
+
+_Note:_ The address is a half-open range, not including the ending number
+
+| Logical Sectors | Address             | Description                     |
+| --------------- | ------------------- | ------------------------------- |
+| 0               | `0x000000-0x000200` | Boot sector                     |
+| 1-24            | `0x000200-0x003200` | Kernel (12K, 24 sectors)        |
+| 25-48           | `0x003200-0x006200` | Assembler (12K, 24 sectors)     |
+| 49-2048         | `0x006200-0x100200` | Source File (1MB, 2000 sectors) |
+| 2049-272        | `0x100200-0x10F1FF` | Assembled File (written) (12K)  |
 
 ## Version 0.1 - Hello World
 
@@ -181,6 +219,48 @@ already have the code to read from an arbitrary number of sectors in
 There is another `build.cmd` file in the rockos directory which will build a
 disk to run the unit tests. This is separate from the `build.cmd` that is in the
 rockasm directories, which builds the assembler.
+
+## Version 0.7 - Memory and Sorted Array
+
+The assembler needs to manage memory in order to start parsing labels. It will
+also need a sorted array, which the kernel will also use to implement the
+rudimentory memory management functions, `os_malloc`, `os_free`, and
+`os_mem_move`. The first data structure is also added, a sorted array, with
+functions to create, add, find, and remove elements. In order to support the
+sorting and searching, `os_binary_search` is also introduced.
+
+The current memory map looks like it's not going to be enough for the heap,
+since the current 16KB of heap space is probably not going to be sufficient.
+This is what it currently looks like:
+
+| Address            | Size  | Description                   |
+| ------------------ | ----- | ----------------------------- |
+| `0x2000:F000-FFFF` | 4 KB  | Stack, growing down in memory |
+| `0x2000:8000-F000` | 28 KB | Space for external programs   |
+| `0x2000:7000-8000` | 4 KB  | Kernel disk operation buffer  |
+| `0x2000:3000-7000` | 16 KB | Heap                          |
+| `0x2000:0000-3000` | 12 KB | Kernel executable code        |
+
+We'll move the heap to `0x2000:6000` and increase the memory to 36KB of memory,
+enough to tide us over for a while. Here's what the new memory map will look
+like:
+
+| Address            | Size  | Description                   |
+| ------------------ | ----- | ----------------------------- |
+| `0x2000:F000-FFFF` | 4 KB  | Stack, growing down in memory |
+| `0x2000:6000-F000` | 36 KB | Heap, growing up in memory    |
+| `0x2000:3000-6000` | 12 KB | Program executable code       |
+| `0x2000:0000-3000` | 12 KB | Kernel executable code        |
+
+### Building
+
+In order to accomodate building the OS using various versions of the bootloader,
+kernel, and assembler, we are introducing a console-based interactive program in
+the rockdisk tool. Simply run `node bin\rockdisk interactive` from the
+`tools\rockdisk` directory to build up the virtual disk to assemble the various
+pieces of the OS. Maybe this is cheating from using just a text and hex editor
+`;)`, but it makes hand copying over the files less tedious and less error
+prone.
 
 ## References
 
