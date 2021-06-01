@@ -10,6 +10,7 @@
 ;
 
 ; [BITS 16]               ; Tells the assembler to generate 16 bit code
+; %include "syscalls.inc"
 
 ; start:
 ~e9 ~fd ~00 ; jmp near kernel_main  ; keep to 3 bytes
@@ -20,6 +21,15 @@
 
 ; sys_call_table:
 ; This table contains a lookup of all of the system calls that we expose.
+;
+; To calculate the offset for the jump, take the starting address of the
+; function and subtract 3 * (the number of entries in the table + 1). The +1
+; comes from the initial `jmp near kernel_main` instruction. The number of
+; entries includes the one you're calculating.
+;
+; For example, here's the formula to calculate the offset for os_malloc:
+;   0x720 - (3 * (17 + 1)) = 0x6ea
+
 ~e9 ~9a ~01 ; jmp os_print_string               ; 0x03
 ~e9 ~b7 ~01 ; jmp os_print_line                 ; 0x06
 ~e9 ~d4 ~01 ; jmp os_print_newline              ; 0x09
@@ -36,10 +46,12 @@
 ~e9 ~43 ~05 ; jmp os_string_to_int              ; 0x2a
 ~e9 ~e0 ~05 ; jmp os_print_int                  ; 0x2d
 ~e9 ~0d ~06 ; jmp os_binary_search              ; 0x30
+~e9 ~ea ~06 ; jmp os_malloc                     ; 0x33
+~e9 ~87 ~07 ; jmp os_free                       ; 0x36
 
 ; times 0x60 - ($ - $$) db 0
 
-            ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+                                      ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
@@ -1241,5 +1253,101 @@
 ~5d                 ; pop bp
 ~c3                 ; ret
 
-; times 0x06a0 - ($ - $$) db 0
+; times 0x0710 - ($ - $$) db 0
                                               ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x0710
+; ------------------------------------------------------------------------------
+; Global variables related to os_malloc and os_free
+; ------------------------------------------------------------------------------
+
+; Heap starts at 0x6000 and occupies 36K
+~00 ~60 ; heap_address:           dw 0x6000
+~00 ~f0 ; heap_max_address:       dw 0xF000
+~00 ~60 ; heap_pos:               dw 0x6000
+
+; times 0x0720 - ($ - $$) db 0
+                        ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x0720
+; ------------------------------------------------------------------------------
+; os_malloc(size)
+;   Allocates memory blocks from the heap.
+;
+;   Input
+;     size - bytes to allocate
+;
+;   Returns
+;     AX - address of the allocated memory, 0 if there is insufficient space
+; ------------------------------------------------------------------------------
+
+; os_malloc:
+~55             ; push bp
+~89 ~e5         ; mov bp, sp
+~83 ~ec ~02     ; sub sp, 2                   ; void* allocated_address
+
+~a1 ~14 ~07     ; mov ax, [heap_pos]
+~89 ~46 ~fe     ; mov [bp - 2], ax            ; allocated_address = heap_pos
+
+    ; check to see if there's enough space
+~03 ~46 ~04     ; add ax, [bp + 4]            ; AX += size
+~3b ~06 ~12 ~07 ; cmp ax, [heap_max_address]
+~7d ~0c         ; jge .insufficient_space
+
+    ; grow the used space
+~8b ~46 ~04     ; mov ax, [bp + 4]            ; AX = size
+~01 ~06 ~14 ~07 ; add [heap_pos], ax          ; heap_pos += size
+
+    ; return the allocated address
+~8b ~46 ~fe     ; mov ax, [bp - 2]            ; AX = allocated_address
+~eb ~03         ; jmp .exit
+; .insufficient_space:
+~b8 ~00 ~00     ; mov ax, 0
+;.exit:
+~89 ~ec         ; mov sp, bp
+~5d             ; pop bp
+~c3             ; ret
+
+; times 0x7c0 - ($ - $$) db 0
+                                  ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x07c0
+; ------------------------------------------------------------------------------
+; os_free(*mem_block)
+;   Deallocates or frees a block of memory.
+;
+;   Input
+;     *mem_block - previously allocated memory block to be freed
+;
+;   Returns
+;     Nothing
+; ------------------------------------------------------------------------------
+
+; os_free:
+~55             ; push bp
+~89 ~e5         ; mov bp, sp
+; Right now this does nothing. Eventually we need to implement it.
+~89 ~ec         ; mov sp, bp
+~5d             ; pop bp
+~c3             ; ret
+
+; times 0x820 - ($ - $$) db 0
+                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x0820

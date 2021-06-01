@@ -222,7 +222,7 @@
 ~50             ; push ax                     ; fail_count = &fail_count
 ~83 ~c0 ~02     ; add ax, 2
 ~50             ; push ax                     ; pass_count = &pass_count
-~b8 ~20 ~35     ; mov ax, test_os_binary_search
+~b8 ~e0 ~35     ; mov ax, test_os_binary_search
 ~ff ~d0         ; call ax
 ~83 ~c4 ~04     ; add sp, 4
 
@@ -253,7 +253,7 @@
 
 ~6a ~67         ; push 'g'
 ~ff ~76 ~fe     ; push word [bp - 2]          ; number = pass_count
-~b8 ~4e ~00     ; mov ax, os_print_int
+~b8 ~2d ~00     ; mov ax, os_print_int
 ~ff ~d0         ; call ax
 ~83 ~c4 ~04     ; add sp, 4
 
@@ -264,7 +264,7 @@
 
 ~6a ~67         ; push 'g'
 ~ff ~76 ~fc     ; push word [bp - 4]          ; number = fail_count
-~b8 ~4e ~00     ; mov ax, os_print_int
+~b8 ~2d ~00     ; mov ax, os_print_int
 ~ff ~d0         ; call ax
 ~83 ~c4 ~04     ; add sp, 4
 
@@ -426,202 +426,83 @@
 
 ; 0x3510
 ; ------------------------------------------------------------------------------
-; test_os_binary_search(int *pass_count, int *fail_count)
-;   Runs the unit tests for os_binary_search.
+; run_tests_for_kernel_func(
+;   int *pass_count,
+;   int *fail_count,
+;   char *function_name,
+;   int test_count,
+;   void *tests)
+;
+;   Helper method to run a series of tests for a kernel function.
 ;
 ;   Input
-;     pass_count - pointer to store the count of tests that passed
-;     fail_count - pointer to store the count of tests that failed
+;     pass_count    - pointer to store the count of tests that passed
+;     fail_count    - pointer to store the count of tests that failed
+;     function_name - string name of the function being tested
+;     test_count    - count of how many tests to run
+;     tests         - an array of functions to call. Each function needs to have
+;                     the following signature:
+;                     `run()` where AX returns non-zero if the test succeeded
+;                     and 0 if the test failed
 ;   Returns
 ;     AX - non-zero if all tests succeeded, 0 if one or more tests failed
 ; ------------------------------------------------------------------------------
 
-; 0x3510
-; str_os_binary_search:
-;     db 'os_binary_search', 0
-~6f ~73 ~5f ~62 ~69 ~6e ~61 ~72   ~79 ~5f ~73 ~65 ~61 ~72 ~63 ~68
-~00
-
-; times 0x3520 - ($ - $$) db 0
-    ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
-
-; 0x3520
-; test_os_binary_search:
+; run_tests_for_kernel_func:
 ~55             ; push bp
 ~89 ~e5         ; mov bp, sp
-~83 ~ec ~08     ; sub sp, 8                   ; int test_number, void* insertion_address,
-                                              ; int pass_count, int fail_count
-~83 ~ec ~07     ; sub sp, 7                   ; char even_array[4], char odd_array[3]
+~83 ~ec ~08     ; sub sp, 8                   ; int test_number, unused,
+                                              ; int local_pass_count, local_fail_count
 
 ~c7 ~46 ~fe ~01 ~00 ; mov word [bp - 2], 1    ; test_number = 1
-~c7 ~46 ~fa ~00 ~00 ; mov word [bp - 6], 0    ; pass_count = 0
-~c7 ~46 ~f8 ~00 ~00 ; mov word [bp - 8], 0    ; fail_count = 0
+~c7 ~46 ~fa ~00 ~00 ; mov word [bp - 6], 0    ; local_pass_count = 0
+~c7 ~46 ~f8 ~00 ~00 ; mov word [bp - 8], 0    ; local_fail_count = 0
 
 ~53             ; push bx
+~51             ; push cx
 
-~68 ~10 ~35     ; push str_os_binary_search
+    ; print the test name
+~ff ~76 ~08     ; push word [bp + 8]          ; function_name
 ~b8 ~06 ~00     ; mov ax, os_print_line
 ~ff ~d0         ; call ax
 ~83 ~c4 ~02     ; add sp, 2
 
-~89 ~eb         ; mov bx, bp
-~83 ~eb ~0c     ; sub bx, 12                  ; BX = even_array
-~b0 ~00         ; mov al, 0
-; .init_even:
-~88 ~07         ; mov [bx], al
-~fe ~c0         ; inc al
-~43             ; inc bx
-~3c ~04         ; cmp al, 4
-~7c ~f7         ; jl .init_even
-~89 ~eb         ; mov bx, bp
-~83 ~eb ~0f     ; sub bx, 15                  ; BX = odd_array
-~b0 ~00         ; mov al, 0
-; .init_odd:
-~88 ~07         ; mov [bx], al
-~fe ~c0         ; inc al
-~43             ; inc bx
-~3c ~03         ; cmp al, 3
-~7c ~f7         ; jl .init_odd
+    ; loop through all of the tests
+~31 ~c9         ; xor cx, cx                  ; i = 0
+; .loop:
+~3b ~4e ~0a     ; cmp cx, [bp + 10]           ; if (i >= test_count) break
+~7d ~40         ; jge .return_counts
 
-    ; --------------------------------------------------------------------------
-    ; Test 1 - zero-length array should return NULL and insertion_address == base
-
-; .test1:
-~89 ~eb         ; mov bx, bp
-~83 ~eb ~0c     ; sub bx, 12                  ; BX = even_array
-~53             ; push bx
-
-~89 ~e8         ; mov ax, bp
-~83 ~e8 ~04     ; sub ax, 4
-~50             ; push ax                     ; insertion_address = &insertion_address
-~68 ~a0 ~36     ; push byte_compare           ; compare
-~6a ~01         ; push 1                      ; width
-~6a ~00         ; push 0                      ; num
-~53             ; push bx                     ; base = even_array
-~6a ~02         ; push 2                      ; key
-~b8 ~30 ~00     ; mov ax, os_binary_search
+    ; call the next test
+~8b ~46 ~0c     ; mov ax, [bp + 12]           ; AX = tests
+~89 ~cb         ; mov bx, cx
+~d1 ~e3         ; shl bx, 1                   ; BX = CX * 2
+~01 ~c3         ; add bx, ax                  ; BX = tests + (CX * 2)
+~8b ~07         ; mov ax, [bx]                ; AX = *BX
 ~ff ~d0         ; call ax
-~83 ~c4 ~0c     ; add sp, 12
-
-~5b             ; pop bx
-
 ~83 ~f8 ~00     ; cmp ax, 0
-~75 ~12         ; jne .test1_fail
-~8b ~46 ~fc     ; mov ax, [bp - 4]            ; AX = insertion_address
-~39 ~d8         ; cmp ax, bx
-~75 ~0b         ; jne .test1_fail
+~74 ~0f         ; je .test_fail
 ~ff ~46 ~fa     ; inc word [bp - 6]           ; pass_count++
 ~b8 ~01 ~00     ; mov ax, 1
-~e8 ~0d ~00     ; call .print_test_result
-~eb ~18         ; jmp .test2
-; .test1_fail:
+~e8 ~18 ~00     ; call .print_test_result
+
+    ; increment the loop counters
+~41             ; inc cx                      ; i++
+~ff ~46 ~fe     ; inc word [bp - 2]           ; test_number++
+~eb ~da         ; jmp .loop
+
+; .test_fail:
+~50             ; push ax
 ~ff ~46 ~f8     ; inc word [bp - 8]           ; fail_count++
 ~b8 ~00 ~00     ; mov ax, 0
-~e8 ~02 ~00     ; call .print_test_result
+~e8 ~08 ~00     ; call .print_test_result
+~58             ; pop ax
+~ba ~1b ~00     ; mov dx, os_print_registers
+~ff ~d2         ; call dx
 ~fa             ; cli
 ~f4             ; hlt
 
 ; .print_test_result:
-~50             ; push ax                     ; passed
-~ff ~76 ~fe     ; push word [bp - 2]          ; test_number
-~b8 ~40 ~32     ; mov ax, print_test_number
-~ff ~d0         ; call ax
-~83 ~c4 ~04     ; add sp, 4
-~c3             ; ret
-
-    ; --------------------------------------------------------------------------
-    ; Test 2 - even-length array should find every element
-
-; .test2:
-~ff ~46 ~fe     ; inc word [bp - 2]           ; test_number++
-~89 ~eb         ; mov bx, bp
-~83 ~eb ~0c     ; sub bx, 12                  ; BX = even_array
-~b9 ~00 ~00     ; mov cx, 0
-; .test2_loop:
-~53             ; push bx
-~51             ; push cx
-
-~6a ~00         ; push 0                      ; insertion_address = NULL
-~68 ~a0 ~36     ; push byte_compare           ; compare
-~6a ~01         ; push 1                      ; width
-~6a ~04         ; push 4                      ; num
-~53             ; push bx                     ; base = even_array
-~51             ; push cx                     ; key
-~b8 ~30 ~00     ; mov ax, os_binary_search
-~ff ~d0         ; call ax
-~83 ~c4 ~0c     ; add sp, 12
-
-~59             ; pop cx
-~5b             ; pop bx
-~29 ~c8         ; sub ax, cx
-~39 ~d8         ; cmp ax, bx
-~75 ~11         ; jne .test2_fail
-~41             ; inc cx
-~83 ~f9 ~04     ; cmp cx, 4
-~7c ~dd         ; jl .test2_loop
-~ff ~46 ~fa     ; inc word [bp - 6]           ; pass_count++
-~b8 ~01 ~00     ; mov ax, 1
-~e8 ~12 ~00     ; call .print_test2_result
-~eb ~1d         ; jmp .test3
-; .test2_fail:
-~ba ~1b ~00     ; mov dx, os_print_registers
-~ff ~d2         ; call dx
-~ff ~46 ~f8     ; inc word [bp - 8]           ; fail_count++
-~b8 ~00 ~00     ; mov ax, 0
-~e8 ~02 ~00     ; call .print_test2_result
-~fa             ; cli
-~f4             ; hlt
-; .print_test2_result:
-~50             ; push ax                     ; passed
-~ff ~76 ~fe     ; push word [bp - 2]          ; test_number
-~b8 ~40 ~32     ; mov ax, print_test_number
-~ff ~d0         ; call ax
-~83 ~c4 ~04     ; add sp, 4
-~c3             ; ret
-
-    ; --------------------------------------------------------------------------
-    ; Test 3 - odd-length array should find every element
-
-; .test3:
-~ff ~46 ~fe     ; inc word [bp - 2]           ; test_number++
-~89 ~eb         ; mov bx, bp
-~83 ~eb ~0f     ; sub bx, 15                  ; BX = odd_array
-~b9 ~00 ~00     ; mov cx, 0
-; .test3_loop:
-~53             ; push bx
-~51             ; push cx
-
-~6a ~00         ; push 0                      ; insertion_address = NULL
-~68 ~a0 ~36     ; push byte_compare           ; compare
-~6a ~01         ; push 1                      ; width
-~6a ~03         ; push 3                      ; num
-~53             ; push bx                     ; base = odd_array
-~51             ; push cx                     ; key
-~b8 ~30 ~00     ; mov ax, os_binary_search
-~ff ~d0         ; call ax
-~83 ~c4 ~0c     ; add sp, 12
-
-~59             ; pop cx
-~5b             ; pop bx
-~29 ~c8         ; sub ax, cx
-~39 ~d8         ; cmp ax, bx
-~75 ~11         ; jne .test3_fail
-~41             ; inc cx
-~83 ~f9 ~03     ; cmp cx, 3
-~7c ~dd         ; jl .test3_loop
-~ff ~46 ~fa     ; inc word [bp - 6]           ; pass_count++
-~b8 ~01 ~00     ; mov ax, 1
-~e8 ~12 ~00     ; call .print_test3_result
-~eb ~1d         ; jmp .return_counts
-; .test3_fail:
-~ba ~1b ~00     ; mov dx, os_print_registers
-~ff ~d2         ; call dx
-~ff ~46 ~f8     ; inc word [bp - 8]           ; fail_count++
-~b8 ~00 ~00     ; mov ax, 0
-~e8 ~02 ~00     ; call .print_test3_result
-~fa             ; cli
-~f4             ; hlt
-; .print_test3_result:
 ~50             ; push ax                     ; passed
 ~ff ~76 ~fe     ; push word [bp - 2]          ; test_number
 ~b8 ~40 ~32     ; mov ax, print_test_number
@@ -643,23 +524,197 @@
 ; .all_passed:
 ~b8 ~01 ~00     ; mov ax, 1
 ; .exit:
+~59             ; pop cx
 ~5b             ; pop bx
 ~89 ~ec         ; mov sp, bp
 ~5d             ; pop bp
 ~c3             ; ret
 
-; times 0x6a0 - ($ - $$) db 0
+; times 0x5c0 - ($ - $$) db 0
+                                                  ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x36a0
+; 0x35c0
 ; ------------------------------------------------------------------------------
-; byte_compare(byte1, *p_byte2)
+; test_os_binary_search(int *pass_count, int *fail_count)
+;   Runs the unit tests for os_binary_search.
+;
+;   Input
+;     pass_count - pointer to store the count of tests that passed
+;     fail_count - pointer to store the count of tests that failed
+;   Returns
+;     AX - non-zero if all tests succeeded, 0 if one or more tests failed
+; ------------------------------------------------------------------------------
+
+; 0x35c0
+; str_os_binary_search:
+;     db 'os_binary_search', 0
+~6f ~73 ~5f ~62 ~69 ~6e ~61 ~72   ~79 ~5f ~73 ~65 ~61 ~72 ~63 ~68
+~00
+
+; 0x35d1
+; binary_search_array:
+;     db 0, 1, 2, 3
+~00 ~01 ~02 ~03
+
+; 0x35d5
+; insertion_address:
+;     dw 0
+~00 ~00
+
+; times 0x5e0 - ($ - $$) db 0
+                            ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x35e0
+; test_os_binary_search:
+~55             ; push bp
+~89 ~e5         ; mov bp, sp
+~83 ~ec ~06     ; sub sp, 6                   ; void* tests[3]
+
+~53             ; push bx
+
+    ; initialize the test function array
+~c7 ~46 ~fa ~20 ~36 ; mov word [bp - 6], .test1
+~c7 ~46 ~fc ~60 ~36 ; mov word [bp - 4], .test2
+~c7 ~46 ~fe ~b0 ~36 ; mov word [bp - 2], .test3
+
+    ; call the runner
+~8d ~46 ~fa     ; lea ax, [bp - 6]            ; AX = &tests
+~50             ; push ax                     ; &tests
+~6a ~03         ; push 3                      ; test_count
+~68 ~c0 ~35     ; push str_os_binary_search   ; function_name
+~ff ~76 ~06     ; push word [bp + 6]          ; fail_count = fail_count (arg)
+~ff ~76 ~04     ; push word [bp + 4]          ; pass_count = pass_count (arg)
+~b8 ~10 ~35     ; mov ax, run_tests_for_kernel_func
+~ff ~d0         ; call ax
+
+~89 ~ec         ; mov sp, bp
+~5d             ; pop bp
+~c3             ; ret
+
+; times 0x620 - ($ - $$) db 0
+                                                          ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+    ; --------------------------------------------------------------------------
+    ; Test 1 - zero-length array should return NULL and insertion_address == base
+
+; 0x3620
+; .test1:
+~68 ~d5 ~35     ; push insertion_address      ; insertion_address = &insertion_address
+~68 ~00 ~37     ; push byte_compare           ; compare
+~6a ~01         ; push 1                      ; width
+~6a ~00         ; push 0                      ; num
+~68 ~d1 ~35     ; push binary_search_array    ; base = binary_search_array
+~6a ~02         ; push 2                      ; key
+~b8 ~30 ~00     ; mov ax, os_binary_search
+~ff ~d0         ; call ax
+~83 ~c4 ~0c     ; add sp, 12
+
+~83 ~f8 ~00     ; cmp ax, 0
+~75 ~05         ; jne .test1_fail
+~b8 ~01 ~00     ; mov ax, 1
+~eb ~03         ; jmp .test1_done
+; .test1_fail:
+~b8 ~00 ~00     ; mov ax, 0
+; .test1_done:
+~c3             ; ret
+
+; times 0x660 - ($ - $$) db 0
+                    ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+    ; --------------------------------------------------------------------------
+    ; Test 2 - even-length array should find every element
+
+; 0x3660
+; .test2:
+~53             ; push bx
+~51             ; push cx
+~b9 ~00 ~00     ; mov cx, 0
+; .test2_loop:
+~6a ~00         ; push 0                      ; insertion_address = NULL
+~68 ~00 ~37     ; push byte_compare           ; compare = byte_compare
+~6a ~01         ; push 1                      ; width = 1
+~6a ~04         ; push 4                      ; num = 4
+~68 ~d1 ~35     ; push binary_search_array    ; base = binary_search_array
+~b8 ~d1 ~35     ; mov ax, binary_search_array
+~01 ~c8         ; add ax, cx
+~50             ; push ax                     ; key = &binary_search_array[i]
+~b8 ~30 ~00     ; mov ax, os_binary_search
+~ff ~d0         ; call ax
+~83 ~c4 ~0c     ; add sp, 12
+
+~83 ~f8 ~00     ; cmp ax, 0
+~74 ~11         ; je .test2_fail
+~89 ~c3         ; mov bx, ax
+~3b ~0f         ; cmp cx, [bx]
+~75 ~0b         ; jne .test2_fail
+~41             ; inc cx
+~83 ~f9 ~01     ; cmp cx, 1
+~7c ~d5         ; jl .test2_loop
+~b8 ~01 ~00     ; mov ax, 1
+~eb ~03         ; jmp .test2_done
+; .test2_fail:
+~b8 ~00 ~00     ; mov ax, 0
+; .test2_done:
+~59             ; pop cx
+~5b             ; pop bx
+~c3             ; ret
+
+; times 0x6b0 - ($ - $$) db 0
+                                              ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+    ; --------------------------------------------------------------------------
+    ; Test 3 - odd-length array should find every element
+
+; 0x36b0
+; .test3:
+~53             ; push bx
+~51             ; push cx
+~bb ~d1 ~35     ; mov bx, binary_search_array ; BX = &binary_search_array
+~b9 ~00 ~00     ; mov cx, 0
+; .test3_loop:
+~6a ~00         ; push 0                      ; insertion_address = NULL
+~68 ~00 ~37     ; push byte_compare           ; compare = byte_compare
+~6a ~01         ; push 1                      ; width = 1
+~6a ~03         ; push 3                      ; num = 3
+~68 ~d1 ~35     ; push binary_search_array    ; base = binary_search_array
+~51             ; push cx                     ; key = i
+~b8 ~30 ~00     ; mov ax, os_binary_search
+~ff ~d0         ; call ax
+~83 ~c4 ~0c     ; add sp, 12
+
+~29 ~c8         ; sub ax, cx
+~3b ~07         ; cmp ax, [bx]
+~75 ~0b         ; jne .test3_fail
+~41             ; inc cx
+~83 ~f9 ~04     ; cmp cx, 4
+~7c ~df         ; jl .test3_loop
+~b8 ~01 ~00     ; mov ax, 1
+~eb ~03         ; jmp .test3_done
+; .test3_fail:
+~b8 ~00 ~00     ; mov ax, 0
+; .test3_done:
+~59             ; pop cx
+~5b             ; pop bx
+~c3             ; ret
+
+; times 0x700 - ($ - $$) db 0
+                ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+
+; 0x3700
+; ------------------------------------------------------------------------------
+; byte_compare(*byte1, *byte2)
 ;   Performs a comparison of 'byte1' and 'byte2' and returns a value that
 ;   indicates their relationship.
 ;
 ;   Input
-;     byte1   - the first byte to compare
-;     p_byte2 - pointer to the second byte to compare
+;     *byte1 - pointer to the first byte to compare
+;     *byte2 - pointer to the second byte to compare
 ;
 ;   Returns
 ;     AX - indicates the relation of 'byte1' to 'byte2', according to the table
@@ -676,9 +731,10 @@
 ~55             ; push bp
 ~89 ~e5         ; mov bp, sp
 ~53             ; push bx
-~8a ~46 ~04     ; mov al, [bp + 4]    ; AL = byte1
-~8b ~5e ~06     ; mov bx, [bp + 6]
-~8a ~1f         ; mov bl, [bx]        ; BL = byte2
+~8b ~5e ~04     ; mov bx, [bp + 4]            ; BX = byte1
+~8a ~07         ; mov al, [bx]                ; AL = *byte1
+~8b ~5e ~06     ; mov bx, [bp + 6]            ; BX = byte2
+~8a ~1f         ; mov bl, [bx]                ; BL = *byte2
 ~38 ~d8         ; cmp al, bl
 ~7c ~04         ; jl .less_than
 ~7f ~07         ; jg .greater_than
@@ -697,7 +753,8 @@
 ~5d             ; pop bp
 ~c3             ; ret
 
-; times 0x6d0 - ($ - $$) db 0
+; times 0x740 - ($ - $$) db 0
                         ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
+~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00   ~00 ~00 ~00 ~00 ~00 ~00 ~00 ~00
 
-; 0x36d0
+; 0x3740

@@ -30,3 +30,5 @@ os_int_to_string            equ 0x27
 os_string_to_int            equ 0x2a
 os_print_int                equ 0x2d
 os_binary_search            equ 0x30
+os_malloc                   equ 0x33
+os_free                     equ 0x36

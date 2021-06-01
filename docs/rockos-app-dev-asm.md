@@ -90,6 +90,9 @@ caller:
 - **[Disk](#disk)**
   - `os_read_sectors`
   - `os_write_sectors`
+- **[Memory](#memory)**
+  - `os_free`
+  - `os_malloc`
 - **[Screen](#screen)**
   - `os_print_char`
   - `os_print_hex_byte`
@@ -153,6 +156,45 @@ void *bsearch(
     the address of either the found element (which matches the return value), or
     the place in which the element should be inserted. Can be NULL if the caller
     doesn't need the insertion address.
+
+---
+
+## Memory
+
+### `os_free(*mem_block)`
+
+> Deallocates or frees a block of memory.
+
+#### C Declaration
+
+```c
+void free(void *memblock);
+```
+
+#### Call Information
+
+- **Address** - `0x36`
+- **Returns** - Nothing
+- **Parameters**
+  - `*mem_block` - previously allocated memory block to be freed
+
+### `os_malloc(size)`
+
+> Allocates memory blocks from the heap.
+
+#### C Declaration
+
+```c
+void *malloc(size_t size);
+```
+
+#### Call Information
+
+- **Address** - `0x33`
+- **Returns**
+  - `AX` - address of the allocated memory, 0 if there is insufficient space
+- **Parameters**
+  - `size` - bytes to allocate
 
 ---
 
