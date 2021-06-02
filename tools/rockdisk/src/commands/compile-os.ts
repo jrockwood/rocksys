@@ -89,7 +89,8 @@ export function parseArgs(args: string[]): CompileOsOptions {
     .command(command, describe, builder)
     .fail((msg: string) => {
       throw new Error(msg);
-    }).argv;
+    })
+    .parseSync();
 
   return resolveOptions(parsedArgs);
 }

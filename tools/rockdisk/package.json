@@ -21,7 +21,7 @@
     "@types/jasmine": "3.7.6",
     "@types/mock-fs": "4.13.0",
     "@types/node": "15.6.1",
-    "@types/yargs": "15.0.11",
+    "@types/yargs": "17.0.0",
     "@typescript-eslint/eslint-plugin": "4.26.0",
     "@typescript-eslint/parser": "4.26.0",
     "eslint": "7.27.0",
@@ -37,7 +37,7 @@
   "dependencies": {
     "colors": "1.4.0",
     "fs-extra": "10.0.0",
-    "inquirer": "7.3.3",
-    "yargs": "16.2.0"
+    "inquirer": "8.1.0",
+    "yargs": "17.0.1"
   }
 }
