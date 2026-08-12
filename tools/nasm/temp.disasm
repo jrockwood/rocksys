@@ -1,0 +1,2 @@
+00000000  FE0D              dec byte [di]
+00000002  FF0D              dec word [di]
